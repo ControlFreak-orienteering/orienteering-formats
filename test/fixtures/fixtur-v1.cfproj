@@ -1,0 +1,132 @@
+{
+  "format": "controlfreak-project",
+  "version": 1,
+  "writtenBy": "ControlFreak",
+  "savedAt": 1791889720765,
+  "project": {
+    "name": "Fixtur före orienteering-formats",
+    "mapName": "Fixturkarta.ocd",
+    "mapId": "fixture-map",
+    "scale": 10000,
+    "origin": "desk-1"
+  },
+  "work": {
+    "mapName": "Fixturkarta.ocd",
+    "savedAt": 1760000000000,
+    "data": {
+      "competitionKind": "normal",
+      "mapStandard": "isom",
+      "forking": true,
+      "firstCode": 31,
+      "controls": [
+        {
+          "id": 1,
+          "code": 31,
+          "x": 1000,
+          "y": 2000
+        },
+        {
+          "id": 2,
+          "code": 32,
+          "x": 3000,
+          "y": 2500
+        },
+        {
+          "id": 3,
+          "code": 33,
+          "x": 2000,
+          "y": 4000
+        },
+        {
+          "id": 4,
+          "code": 34,
+          "x": 4000,
+          "y": 4500,
+          "crossing": {}
+        },
+        {
+          "id": 5,
+          "code": 35,
+          "x": 5000,
+          "y": 3000
+        }
+      ],
+      "courses": [
+        {
+          "id": 1,
+          "name": "Bana 1",
+          "printScale": 10000,
+          "startCode": "S1",
+          "finishCode": "M1",
+          "start": {
+            "x": 0,
+            "y": 0
+          },
+          "finish": {
+            "x": 6000,
+            "y": 6000
+          },
+          "climbMeters": 45,
+          "courseControls": [
+            {
+              "id": 1,
+              "controlId": 1
+            },
+            {
+              "id": 2,
+              "controlId": 4
+            },
+            {
+              "id": 3,
+              "controlId": 5
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Bana 2 gafflad",
+          "printScale": 7500,
+          "startCode": "S1",
+          "finishCode": "M1",
+          "start": {
+            "x": 0,
+            "y": 0
+          },
+          "finish": {
+            "x": 6000,
+            "y": 6000
+          },
+          "overrideLengthMeters": 2300,
+          "courseControls": [
+            {
+              "id": 1,
+              "controlId": 1,
+              "fork": {
+                "branches": [
+                  [
+                    {
+                      "id": 4,
+                      "controlId": 2
+                    }
+                  ],
+                  [
+                    {
+                      "id": 5,
+                      "controlId": 3
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "id": 2,
+              "controlId": 5
+            }
+          ]
+        }
+      ],
+      "specials": [],
+      "activeCourseId": 1
+    }
+  }
+}
