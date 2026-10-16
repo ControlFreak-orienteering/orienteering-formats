@@ -4,8 +4,9 @@ This repository is **public**. Never commit secrets, keys or user data.
 
 - Code and comments are in English, and every exported function and type has a JSDoc
   comment.
-- Keep the package small. It holds only file formats and the types they need. App
-  logic and UI stay in the apps.
+- Keep the package small. It holds only file formats, the types they need, and the map
+  reader that draws map files as SVG (`src/map/`, its own entry point). App logic and
+  UI stay in the apps.
 - Follow the change rules in README.md:
   - old files must stay readable,
   - versions follow semver,
@@ -13,4 +14,5 @@ This repository is **public**. Never commit secrets, keys or user data.
   - every release is tagged.
 - No runtime dependencies without agreement from both developers (HenrikF and
   proverhugo). Every dependency ends up in both apps and their license lists.
-- Run `npm run build && npm test` before every commit.
+- Run `npm run build && npm test` before every commit. `npm test` runs the format tests
+  on `dist/` and the map reader's tests in `src/map/*.test.ts` with Vitest.

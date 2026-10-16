@@ -13,7 +13,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.2.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.3.0"
 ```
 
 Reading a pack or project file (e.g. in CompetitionFreak):
@@ -44,9 +44,9 @@ const text = writeProjectFile(envelope);                          // .cfproj
 const blob = await writeCfpack(envelope, { bytes, name, id });    // .cfpack
 ```
 
-The package has no runtime dependencies. It uses `CompressionStream`,
-`DecompressionStream`, `Blob`, `TextEncoder` and `TextDecoder`, which every current
-browser and Node 18+ have.
+The package has no runtime dependencies; TypeScript, Vitest and xmldom are only
+development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
+`TextEncoder` and `TextDecoder`, which every current browser and Node 18+ have.
 
 ## Contents
 
@@ -68,6 +68,41 @@ Both files hold the same JSON object (the *envelope*):
 | `work`      | ControlFreak's own course model. **Other apps must not read it**; this package passes it through as `unknown`. |
 | `exchange`  | optional; courses and controls for other apps, see below                |
 | `map`       | `.cfpack` only: `name`, `id`, `encoding` (`gzip`/`raw`), `byteLength`   |
+
+## Map files
+
+`orienteering-formats/map` reads the map files ControlFreak opens and draws them as SVG:
+OCAD (`.ocd`, versions 8 and 10–2018) and OpenOrienteering Mapper (`.omap`, `.xmap`). It
+is a separate entry point, so an app that only reads `.cfpack` files does not bundle it.
+
+```ts
+import { MapError, mapSvgMarkup, readMapFile } from "orienteering-formats/map";
+
+try {
+  const drawing = readMapFile(map.bytes, map.name); // e.g. the map from a .cfpack
+  drawing.viewBox;      // "minX minY width height", in map units
+  drawing.innerMarkup;  // the SVG content, without <svg>
+  drawing.scale;        // e.g. 10000
+  drawing.georef;       // where the map lies on earth, or null
+  const svg = mapSvgMarkup(drawing); // a whole SVG document
+} catch (e) {
+  if (e instanceof MapError) e.code; // "unsupported-file" | "not-ocad" | "ocad-version" | ...
+}
+```
+
+- **The SVG's units are the map file's own**, x to the right and y downwards: the same
+  coordinates as the controls in the exchange section below. A course drawn in the same
+  `viewBox` lands on the map without conversion.
+- **Legible rather than complete.** Point, line, area (with holes, hatching and
+  patterns) and text symbols are drawn; symbols spaced along a line (fence tags, cliff
+  ticks) are not.
+- **`.omap` files need a `DOMParser`.** Browsers have one; elsewhere pass `parseXml`
+  (e.g. from `@xmldom/xmldom`).
+- The entry point also exports the lower-level readers ControlFreak uses: the parsed
+  OCAD map (`parseOcadFile`, `renderMapSvg`), cropping (`cropOcad`, `cropOmapXml`) and
+  conversion between map and earth coordinates (`mapToWgs84`, `wgs84ToMap`).
+- **Tests** can build small OCAD files with `OcdFileBuilder` from
+  `orienteering-formats/map-testing`.
 
 ## The exchange section
 
