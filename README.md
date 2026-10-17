@@ -1,9 +1,11 @@
 # orienteering-formats
 
-File formats shared by two orienteering apps:
+File formats shared by orienteering apps:
 
 - **ControlFreak** (course setting) writes `.cfpack` and `.cfproj` files.
-- **CompetitionFreak** (competition administration) reads them.
+- **CompetitionFreak** (competition administration) reads them, and sends competitions and
+  start lists as QR films.
+- **The start clock** (startklocka) reads start lists from CompetitionFreak's QR films.
 
 Keeping the format code here means both apps read and write the files the same way, and
 a change to the format is a deliberate new version rather than a silent break.
@@ -68,6 +70,31 @@ Both files hold the same JSON object (the *envelope*):
 | `work`      | ControlFreak's own course model. **Other apps must not read it**; this package passes it through as `unknown`. |
 | `exchange`  | optional; courses and controls for other apps, see below                |
 | `map`       | `.cfpack` only: `name`, `id`, `encoding` (`gzip`/`raw`), `byteLength`   |
+
+## QR films and start lists
+
+`orienteering-formats/qr` moves data between devices with a camera, with no network:
+
+- **QR film** (`encodeFrames`, `FrameCollector`): a text is compressed and cut into QR codes
+  (`CFQ1|<id>|<index>|<count>|<data>`), shown in a loop on the sending screen and collected
+  in any order by the receiver. Moved here from CompetitionFreak; the frames are unchanged.
+- **Start list** (`writeStartList`, `readStartList`), format `cf-startlist`: who starts when,
+  for the start clock. Each runner has `time` ("HH:MM:SS") and `name`, and optionally
+  `club`, `class`, `card`, `start`, `course` and `late`. Later versions only add fields, and
+  the reader ignores what it does not know, so a start clock keeps reading lists from newer
+  versions of CompetitionFreak.
+
+```ts
+import { encodeFrames, FrameCollector, readStartList, writeStartList } from "orienteering-formats/qr";
+
+const frames = await encodeFrames(writeStartList(list)); // show these as QR codes
+const collector = new FrameCollector();
+collector.add(textFromCamera); // until collector.complete()
+const received = readStartList(await collector.payload());
+```
+
+Errors are `FormatError`s with a code (`wrong-format`, `unreadable`), for the app to put
+into words.
 
 ## Map files
 
