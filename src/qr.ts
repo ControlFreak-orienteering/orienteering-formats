@@ -1,8 +1,15 @@
 /**
- * The QR film and the start list, for moving data between devices with a camera (e.g.
- * from CompetitionFreak to the start clock). A separate entry point, so that apps which
+ * The QR film, the start list and the clock code, for moving data between devices with a
+ * camera (e.g. from CompetitionFreak to the start clock). A separate entry point, so that apps which
  * only read course files do not carry it.
  */
+export {
+  CLOCK_CODE_PREFIX,
+  ClockSampler,
+  readClockCode,
+  writeClockCode,
+  type ClockOffset,
+} from "./clock-code.js";
 export {
   encodeFrames,
   FRAME_DATA_SIZE,
