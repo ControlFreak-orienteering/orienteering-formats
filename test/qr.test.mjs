@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  ClockSampler,
   encodeFrames,
   FRAME_PREFIX,
   FrameCollector,
+  readClockCode,
   readStartList,
   START_LIST_FORMAT,
+  writeClockCode,
   writeStartList,
 } from "../dist/qr.js";
 
@@ -84,4 +87,31 @@ test("anything else is not a start list", () => {
   assert.throws(() => readStartList("not json"), { code: "wrong-format" });
   assert.throws(() => readStartList('{"format":"other"}'), { code: "wrong-format" });
   assert.throws(() => readStartList(`{"format":"${START_LIST_FORMAT}"}`), { code: "unreadable" });
+});
+
+test("a clock code carries the sender's time", () => {
+  const text = writeClockCode(1_792_000_000_123.4);
+  assert.equal(text, "CFT1|1792000000123");
+  assert.equal(readClockCode(text), 1_792_000_000_123);
+  assert.equal(readClockCode("CFQ1|abc|0|1|xyz"), null);
+  assert.equal(readClockCode("CFT1|"), null);
+  assert.equal(readClockCode("CFT1|12a"), null);
+});
+
+test("the clock sampler keeps the code with the least delay", () => {
+  const sampler = new ClockSampler();
+  assert.equal(sampler.offset(), null);
+  // The receiver is 1 500 ms behind the sender; the codes arrive 80, 30 and 120 ms late.
+  const truth = 1500;
+  for (const [sent, delay] of [
+    [10_000, 80],
+    [10_100, 30],
+    [10_200, 120],
+  ]) {
+    assert.equal(sampler.add(writeClockCode(sent), sent - truth + delay), true);
+  }
+  // The same code seen again in a later picture is later still and changes nothing.
+  sampler.add(writeClockCode(10_100), 10_100 - truth + 130);
+  assert.equal(sampler.add("https://example.com", 0), false);
+  assert.deepEqual(sampler.offset(), { offsetMs: truth - 30, samples: 3 });
 });

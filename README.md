@@ -83,6 +83,10 @@ Both files hold the same JSON object (the *envelope*):
   `club`, `class`, `card`, `start`, `course` and `late`. Later versions only add fields, and
   the reader ignores what it does not know, so a start clock keeps reading lists from newer
   versions of CompetitionFreak.
+- **Clock code** (`writeClockCode`, `readClockCode`, `ClockSampler`): a QR code with the
+  sender's time (`CFT1|<milliseconds since 1970>`), redrawn several times a second, so that
+  the start clock can set itself to CompetitionFreak's clock. `ClockSampler` keeps the code
+  that arrived with the least delay; its `offsetMs` is what to add to the receiver's clock.
 
 ```ts
 import { encodeFrames, FrameCollector, readStartList, writeStartList } from "orienteering-formats/qr";
@@ -91,6 +95,11 @@ const frames = await encodeFrames(writeStartList(list)); // show these as QR cod
 const collector = new FrameCollector();
 collector.add(textFromCamera); // until collector.complete()
 const received = readStartList(await collector.payload());
+
+// Clock code: the sender redraws writeClockCode(Date.now()) about ten times a second.
+const sampler = new ClockSampler();
+sampler.add(textFromCamera, timePictureWasTaken); // for a few seconds
+sampler.offset(); // { offsetMs, samples }, offsetMs > 0 when the sender is ahead
 ```
 
 Errors are `FormatError`s with a code (`wrong-format`, `unreadable`), for the app to put
