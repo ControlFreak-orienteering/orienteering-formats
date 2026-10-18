@@ -34,8 +34,8 @@
  * same code is always punched the same way.
  *
  * Compatibility: printed codes live for months. Every release must keep reading every link
- * and payload an earlier release wrote, including the legacy `#c=<base64url>` links from
- * before v0.6.0 in both their layouts (read-only, see {@link decodeLegacyRunCourse}). New data is added only
+ * and payload written since the format of v0.6.0. Earlier pre-release `#c=<base64url>` links
+ * are not supported. New data is added only
  * with a new version byte or a new flag, which older readers refuse cleanly; existing bytes
  * are never reinterpreted. The alphabet, the packing, the coordinate resolution and the
  * link prefixes never change. The frozen vectors in `test/run-frozen.test.mjs` pin this.
@@ -229,8 +229,7 @@ export function decodeRunCourse(payload) {
     return readCourse(fromPayload(payload), KNOWN_FLAGS);
 }
 /**
- * Reads the bytes of a version 1 course. Shared by the current payload and the legacy
- * base64url links, which carry the same bytes; only the set of known flags differs.
+ * Reads the bytes of a version 1 course.
  */
 function readCourse(bytes, knownFlags) {
     const r = new Reader(bytes);
@@ -303,174 +302,16 @@ export function runCourseQrSegments(course) {
     return { prefix: RUN_URL_PREFIX, payload: encodeRunCourse(course) };
 }
 /**
- * Link prefixes of the legacy format, which apps before v0.6.0 wrote:
- * `https://run.controlfreak.se/#c=<base64url>` and, before the runner app had its own
- * site, `https://course.controlfreak.se/run#c=<base64url>`. Printed codes may still carry
- * them, so they are read (see {@link decodeLegacyRunCourse}), but never written.
- */
-export const RUN_LEGACY_URL_PREFIXES = Object.freeze([
-    `${RUN_ORIGIN}${RUN_PATH}#c=`,
-    "https://course.controlfreak.se/run#c=",
-]);
-/** Base64url (RFC 4648 section 5) without padding, the alphabet of the legacy links. */
-const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-const BASE64URL_VALUE = new Map([...BASE64URL].map((ch, i) => [ch, i]));
-/** Base64url without padding back to bytes; anything else is unreadable. */
-function fromBase64Url(s) {
-    if (s.length % 4 === 1)
-        throw unreadable();
-    const out = new Uint8Array(Math.floor((s.length * 6) / 8));
-    let bits = 0;
-    let acc = 0;
-    let o = 0;
-    for (const ch of s) {
-        const v = BASE64URL_VALUE.get(ch);
-        if (v === undefined)
-            throw unreadable();
-        acc = (acc << 6) | v;
-        bits += 6;
-        if (bits >= 8) {
-            bits -= 8;
-            out[o++] = (acc >> bits) & 0xff;
-        }
-        acc &= (1 << bits) - 1;
-    }
-    return out;
-}
-/**
- * Reads the earliest legacy layout (Course, 2026-10-17), which also starts with version
- * byte 1 but carried the punching settings in the code:
- *
- *     version (1 byte) = 1
- *     radius in metres (varint), GPS accuracy in metres (varint); both ignored now
- *     order (1 byte): 0 = sequence, nothing else was ever written
- *     flags (1 byte): bit 0 = finish, nothing else was ever written
- *     name: length in bytes (varint), UTF-8
- *     number of controls (varint)
- *     per control: code (varint), lat delta, lng delta
- *     [finish: lat delta, lng delta]
- *
- * No start. Positions as in version 1 (zigzag deltas in 1e-5 degrees, the first from 0, 0).
- * The fixed punching rules of the runner app apply instead of the stored radius and accuracy.
- */
-function readEarliestCourse(bytes) {
-    const r = new Reader(bytes);
-    if (r.byte() !== RUN_FORMAT_VERSION)
-        throw unreadable();
-    r.varint(); // radius in metres, ignored
-    r.varint(); // GPS accuracy in metres, ignored
-    if (r.byte() !== 0)
-        throw unreadable();
-    const flags = r.byte();
-    if (flags & ~FLAG_FINISH)
-        throw unreadable();
-    let name;
-    try {
-        name = new TextDecoder("utf-8", { fatal: true }).decode(r.take(r.varint()));
-    }
-    catch (e) {
-        if (e instanceof FormatError)
-            throw e;
-        throw unreadable();
-    }
-    const n = r.varint();
-    if (n > MAX_CONTROLS)
-        throw unreadable();
-    let lat = 0;
-    let lng = 0;
-    const point = () => {
-        lat += r.signed();
-        lng += r.signed();
-        return { lat: lat / SCALE, lng: lng / SCALE };
-    };
-    const controls = [];
-    for (let i = 0; i < n; i++) {
-        const code = r.varint();
-        controls.push({ code, ...point() });
-    }
-    const finish = flags & FLAG_FINISH ? point() : null;
-    if (!r.atEnd())
-        throw unreadable();
-    return { v: 1, name, start: null, controls, finish, score: null };
-}
-/** True when every position of the course is a real WGS84 position. */
-function plausiblePositions(course) {
-    const points = [...course.controls];
-    if (course.start)
-        points.push(course.start);
-    if (course.finish)
-        points.push(course.finish);
-    return points.every((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
-}
-/** The course a layout reader gives, or the error it throws. */
-function attempt(read) {
-    try {
-        return read();
-    }
-    catch (e) {
-        if (e instanceof FormatError)
-            return e;
-        throw e;
-    }
-}
-/**
- * Reads a course in the legacy format of the `#c=` links that apps before v0.6.0 wrote
- * (see {@link RUN_LEGACY_URL_PREFIXES}). Read-only: the package never writes it.
- *
- * The legacy payload is base64url without padding of version 1 bytes in one of two
- * layouts, which both start with version byte 1:
- *
- * - the slim layout: the same bytes as {@link decodeRunCourse} reads, from a time when only
- *   the finish and start flags existed;
- * - the earliest layout (the first release, 2026-10-17), with radius, accuracy and order
- *   bytes before the flags and no start. The stored radius and accuracy are ignored.
- *
- * Both layouts are tried. A layout is accepted only when it reads cleanly, uses exactly
- * all bytes and holds only known values (slim flags at most 3; earliest order 0 and flags
- * at most 1). If both qualify, the one whose positions are all real WGS84 positions wins,
- * and the slim layout before the earliest. Legacy courses have no score rules and their
- * controls no points.
- *
- * @param value - The base64url value after `c=`.
- * @returns The course, with `score: null`.
- * @throws {FormatError} `newer-version` when the version byte is above 1, `unreadable`
- *   when cut short, garbage, or readable in neither layout.
- */
-export function decodeLegacyRunCourse(value) {
-    const bytes = fromBase64Url(value);
-    const slim = attempt(() => readCourse(bytes, FLAG_FINISH | FLAG_START));
-    // A newer version is decided by the first byte alone; the earliest layout is version 1.
-    if (slim instanceof FormatError && slim.code === "newer-version")
-        throw slim;
-    const earliest = attempt(() => readEarliestCourse(bytes));
-    const read = [slim, earliest].filter((c) => !(c instanceof FormatError));
-    const chosen = read.find(plausiblePositions) ?? read[0];
-    if (chosen)
-        return chosen;
-    throw slim;
-}
-/**
  * The course in a `location.hash`: the whole fragment is the payload.
- *
- * A fragment in the legacy query style (`c=<base64url>`, possibly among other
- * `key=value` pairs) is read with {@link decodeLegacyRunCourse}, so that codes printed
- * before v0.6.0 still open. The two cannot be confused: `=` is not in
- * {@link RUN_PAYLOAD_ALPHABET}.
  *
  * @param hash - `location.hash`, with or without the leading `#`.
  * @returns The course, or null when the fragment is empty.
  * @throws {FormatError} As {@link decodeRunCourse} when there is a fragment that is not
- *   a readable course (a query-style fragment without `c` is `unreadable`).
+ *   a readable course. Older `#c=<base64url>` links are not supported and are `unreadable`.
  */
 export function runCourseFromHash(hash) {
     const payload = hash.replace(/^#/, "");
     if (payload === "")
         return null;
-    if (payload.includes("=")) {
-        const legacy = new URLSearchParams(payload).get("c");
-        if (legacy === null)
-            throw unreadable();
-        return decodeLegacyRunCourse(legacy);
-    }
     return decodeRunCourse(payload);
 }
