@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  decodeLegacyRunCourse,
   decodeRunCourse,
   encodeRunCourse,
   FormatError,
@@ -297,9 +298,78 @@ test("reads the course from the whole fragment", () => {
   assert.equal(runCourseFromHash(payload).name, "Blå 5 km");
   assert.equal(runCourseFromHash(""), null);
   assert.equal(runCourseFromHash("#"), null);
-  // The old query style is not a course.
+  // The legacy query style is read as base64url; a current payload there is not.
   assert.equal(
     codeOf(() => runCourseFromHash(`#c=${payload}`)),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => runCourseFromHash("#x=1")),
+    "unreadable",
+  );
+});
+
+/** Base64url without padding, as the legacy links were written. */
+const toBase64Url = (bytes) =>
+  Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+test("reads legacy #c= links, never with score rules", () => {
+  // The legacy links carry the same version 1 bytes as the current payload.
+  const bytes = fromPayload(encodeRunCourse(course()));
+  const value = toBase64Url(bytes);
+  const back = runCourseFromHash(`#c=${value}`);
+  assert.equal(back.name, "Blå 5 km");
+  assert.equal(back.score, null);
+  assert.deepEqual(back, decodeRunCourse(encodeRunCourse(course())));
+  assert.deepEqual(back, decodeLegacyRunCourse(value));
+  // Other keys around `c` were allowed by the legacy reader.
+  assert.deepEqual(runCourseFromHash(`#x=1&c=${value}`), back);
+  const noStartOrFinish = toBase64Url(
+    fromPayload(encodeRunCourse(course({ start: null, finish: null, controls: [] }))),
+  );
+  assert.deepEqual(
+    decodeLegacyRunCourse(noStartOrFinish),
+    course({ start: null, finish: null, controls: [] }),
+  );
+});
+
+test("refuses broken or newer legacy links", () => {
+  const bytes = fromPayload(encodeRunCourse(course()));
+  // The legacy format had no score flag: a legacy link with it is not one we wrote.
+  const scored = [...bytes];
+  scored[1] |= 4;
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse(toBase64Url(scored))),
+    "unreadable",
+  );
+  // A newer version is decided by the first byte alone, as the legacy reader did.
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse("Ag")),
+    "newer-version",
+  );
+  const value = toBase64Url(bytes);
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse(value.slice(0, -6))),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse(value + "AAAA")),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse("!!skräp??")),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse("")),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => decodeLegacyRunCourse("A")),
+    "unreadable",
+  );
+  assert.equal(
+    codeOf(() => runCourseFromHash("#c=")),
     "unreadable",
   );
 });

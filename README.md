@@ -160,8 +160,26 @@ const qr = QrCode.encodeSegments(
   a newer version is refused with `newer-version` without reading the rest.
 - **Size**: 25 controls over 3×3 km give a 224-character payload, a QR code of version 10
   with error correction M.
+- **Legacy links**: before v0.6.0 the apps wrote `https://run.controlfreak.se/#c=<base64url>`
+  (and earlier `https://course.controlfreak.se/run#c=<base64url>`), base64url of the same
+  version 1 bytes without the score flag. `runCourseFromHash` still reads them (with
+  `score: null`), and `decodeLegacyRunCourse` and `RUN_LEGACY_URL_PREFIXES` are exported
+  for apps that classify scanned links. The package never writes them.
 - The QR library stays in the apps. The test vectors in `test/run.test.mjs` are shared
   with the apps.
+
+### Compatibility rules for course links
+
+Printed QR codes live for months, so the link format only ever grows:
+
+- Every change must keep decoding all earlier links and payloads, including the legacy
+  `#c=` links.
+- New data is added only additively: a new version byte, or a new flag that older readers
+  refuse cleanly (`newer-version` / `unreadable`). Existing bytes are never reinterpreted.
+- The payload alphabet, the packing (two bytes as three characters), the coordinate
+  resolution (1e-5 degrees) and the link prefixes never change.
+- `test/run-frozen.test.mjs` pins exact payloads to exact decoded courses. Its vectors are
+  never changed or removed; every new version gets a new vector there.
 
 ## Map files
 

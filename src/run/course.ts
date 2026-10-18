@@ -32,6 +32,13 @@
  *
  * The code holds only the course. The punching rules are fixed in the runner app, so the
  * same code is always punched the same way.
+ *
+ * Compatibility: printed codes live for months. Every release must keep reading every link
+ * and payload an earlier release wrote, including the legacy `#c=<base64url>` links from
+ * before v0.6.0 (read-only, see {@link decodeLegacyRunCourse}). New data is added only
+ * with a new version byte or a new flag, which older readers refuse cleanly; existing bytes
+ * are never reinterpreted. The alphabet, the packing, the coordinate resolution and the
+ * link prefixes never change. The frozen vectors in `test/run-frozen.test.mjs` pin this.
  */
 
 import { FormatError } from "../errors.js";
@@ -282,14 +289,22 @@ export function encodeRunCourse(course: RunCourse): string {
  *   (decided by the first byte alone), `unreadable` when cut short or garbage.
  */
 export function decodeRunCourse(payload: string): RunCourse {
-  const r = new Reader(fromPayload(payload));
+  return readCourse(fromPayload(payload), KNOWN_FLAGS);
+}
+
+/**
+ * Reads the bytes of a version 1 course. Shared by the current payload and the legacy
+ * base64url links, which carry the same bytes; only the set of known flags differs.
+ */
+function readCourse(bytes: Uint8Array, knownFlags: number): RunCourse {
+  const r = new Reader(bytes);
   // The version first: a newer payload must not be interpreted at all.
   const version = r.byte();
   if (version > RUN_FORMAT_VERSION) throw new FormatError("newer-version");
   if (version !== RUN_FORMAT_VERSION) throw unreadable();
   const flags = r.byte();
   // Unknown flags mean something we do not understand: better an error than a wrong course.
-  if (flags & ~KNOWN_FLAGS) throw unreadable();
+  if (flags & ~knownFlags) throw unreadable();
   let name: string;
   try {
     name = new TextDecoder("utf-8", { fatal: true }).decode(r.take(r.varint()));
@@ -348,15 +363,78 @@ export function runCourseQrSegments(course: RunCourse): RunQrSegments {
 }
 
 /**
+ * Link prefixes of the legacy format, which apps before v0.6.0 wrote:
+ * `https://run.controlfreak.se/#c=<base64url>` and, before the runner app had its own
+ * site, `https://course.controlfreak.se/run#c=<base64url>`. Printed codes may still carry
+ * them, so they are read (see {@link decodeLegacyRunCourse}), but never written.
+ */
+export const RUN_LEGACY_URL_PREFIXES: readonly string[] = Object.freeze([
+  `${RUN_ORIGIN}${RUN_PATH}#c=`,
+  "https://course.controlfreak.se/run#c=",
+]);
+
+/** Base64url (RFC 4648 section 5) without padding, the alphabet of the legacy links. */
+const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const BASE64URL_VALUE = new Map([...BASE64URL].map((ch, i) => [ch, i] as const));
+
+/** Base64url without padding back to bytes; anything else is unreadable. */
+function fromBase64Url(s: string): Uint8Array {
+  if (s.length % 4 === 1) throw unreadable();
+  const out = new Uint8Array(Math.floor((s.length * 6) / 8));
+  let bits = 0;
+  let acc = 0;
+  let o = 0;
+  for (const ch of s) {
+    const v = BASE64URL_VALUE.get(ch);
+    if (v === undefined) throw unreadable();
+    acc = (acc << 6) | v;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out[o++] = (acc >> bits) & 0xff;
+    }
+    acc &= (1 << bits) - 1;
+  }
+  return out;
+}
+
+/**
+ * Reads a course in the legacy format of the `#c=` links that apps before v0.6.0 wrote
+ * (see {@link RUN_LEGACY_URL_PREFIXES}). Read-only: the package never writes it.
+ *
+ * The legacy payload is base64url without padding of the same version 1 bytes as
+ * {@link decodeRunCourse} reads, from a time when only the finish and start flags existed.
+ * Legacy courses therefore have no score rules and their controls no points.
+ *
+ * @param value - The base64url value after `c=`.
+ * @returns The course, with `score: null`.
+ * @throws {FormatError} `newer-version` when the version byte is above 1, `unreadable`
+ *   when cut short, garbage, or carrying flags the legacy format did not have.
+ */
+export function decodeLegacyRunCourse(value: string): RunCourse {
+  return readCourse(fromBase64Url(value), FLAG_FINISH | FLAG_START);
+}
+
+/**
  * The course in a `location.hash`: the whole fragment is the payload.
+ *
+ * A fragment in the legacy query style (`c=<base64url>`, possibly among other
+ * `key=value` pairs) is read with {@link decodeLegacyRunCourse}, so that codes printed
+ * before v0.6.0 still open. The two cannot be confused: `=` is not in
+ * {@link RUN_PAYLOAD_ALPHABET}.
  *
  * @param hash - `location.hash`, with or without the leading `#`.
  * @returns The course, or null when the fragment is empty.
  * @throws {FormatError} As {@link decodeRunCourse} when there is a fragment that is not
- *   a readable course.
+ *   a readable course (a query-style fragment without `c` is `unreadable`).
  */
 export function runCourseFromHash(hash: string): RunCourse | null {
   const payload = hash.replace(/^#/, "");
   if (payload === "") return null;
+  if (payload.includes("=")) {
+    const legacy = new URLSearchParams(payload).get("c");
+    if (legacy === null) throw unreadable();
+    return decodeLegacyRunCourse(legacy);
+  }
   return decodeRunCourse(payload);
 }

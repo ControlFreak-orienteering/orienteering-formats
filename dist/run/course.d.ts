@@ -32,6 +32,13 @@
  *
  * The code holds only the course. The punching rules are fixed in the runner app, so the
  * same code is always punched the same way.
+ *
+ * Compatibility: printed codes live for months. Every release must keep reading every link
+ * and payload an earlier release wrote, including the legacy `#c=<base64url>` links from
+ * before v0.6.0 (read-only, see {@link decodeLegacyRunCourse}). New data is added only
+ * with a new version byte or a new flag, which older readers refuse cleanly; existing bytes
+ * are never reinterpreted. The alphabet, the packing, the coordinate resolution and the
+ * link prefixes never change. The frozen vectors in `test/run-frozen.test.mjs` pin this.
  */
 /** Origin of the runner app. */
 export declare const RUN_ORIGIN = "https://run.controlfreak.se";
@@ -131,11 +138,37 @@ export declare function runCourseUrl(course: RunCourse): string;
  */
 export declare function runCourseQrSegments(course: RunCourse): RunQrSegments;
 /**
+ * Link prefixes of the legacy format, which apps before v0.6.0 wrote:
+ * `https://run.controlfreak.se/#c=<base64url>` and, before the runner app had its own
+ * site, `https://course.controlfreak.se/run#c=<base64url>`. Printed codes may still carry
+ * them, so they are read (see {@link decodeLegacyRunCourse}), but never written.
+ */
+export declare const RUN_LEGACY_URL_PREFIXES: readonly string[];
+/**
+ * Reads a course in the legacy format of the `#c=` links that apps before v0.6.0 wrote
+ * (see {@link RUN_LEGACY_URL_PREFIXES}). Read-only: the package never writes it.
+ *
+ * The legacy payload is base64url without padding of the same version 1 bytes as
+ * {@link decodeRunCourse} reads, from a time when only the finish and start flags existed.
+ * Legacy courses therefore have no score rules and their controls no points.
+ *
+ * @param value - The base64url value after `c=`.
+ * @returns The course, with `score: null`.
+ * @throws {FormatError} `newer-version` when the version byte is above 1, `unreadable`
+ *   when cut short, garbage, or carrying flags the legacy format did not have.
+ */
+export declare function decodeLegacyRunCourse(value: string): RunCourse;
+/**
  * The course in a `location.hash`: the whole fragment is the payload.
+ *
+ * A fragment in the legacy query style (`c=<base64url>`, possibly among other
+ * `key=value` pairs) is read with {@link decodeLegacyRunCourse}, so that codes printed
+ * before v0.6.0 still open. The two cannot be confused: `=` is not in
+ * {@link RUN_PAYLOAD_ALPHABET}.
  *
  * @param hash - `location.hash`, with or without the leading `#`.
  * @returns The course, or null when the fragment is empty.
  * @throws {FormatError} As {@link decodeRunCourse} when there is a fragment that is not
- *   a readable course.
+ *   a readable course (a query-style fragment without `c` is `unreadable`).
  */
 export declare function runCourseFromHash(hash: string): RunCourse | null;
