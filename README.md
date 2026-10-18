@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.6.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.7.0"
 ```
 
 Reading a pack or project file (e.g. in CompetitionFreak):
@@ -160,23 +160,8 @@ const qr = QrCode.encodeSegments(
   a newer version is refused with `newer-version` without reading the rest.
 - **Size**: 25 controls over 3×3 km give a 224-character payload, a QR code of version 10
   with error correction M.
-- **Legacy links**: before v0.6.0 the apps wrote `https://run.controlfreak.se/#c=<base64url>`
-  (and earlier `https://course.controlfreak.se/run#c=<base64url>`), base64url of the same
-  version 1 bytes without the score flag. `runCourseFromHash` still reads them (with
-  `score: null`), and `decodeLegacyRunCourse` and `RUN_LEGACY_URL_PREFIXES` are exported
-  for apps that classify scanned links. The package never writes them.
-- **Earliest legacy layout**: the very first release (Course, 2026-10-17) wrote
-  `https://course.controlfreak.se/run#c=<base64url>` with a different version 1 layout:
-  version (1) · radius m (varint) · accuracy m (varint) · order (1 byte, 0 = sequence) ·
-  flags (1 byte, bit 0 = finish) · name length (varint) · name (UTF-8) · control count
-  (varint) · per control: code (varint), lat delta, lng delta · [finish: lat delta, lng
-  delta]. No start; positions as in version 1. Since v0.6.2 `decodeLegacyRunCourse` (and
-  so `runCourseFromHash`) also reads it, with `start: null` and `score: null`; the stored
-  radius and accuracy are ignored, because the runner app's punching rules are fixed. Both
-  layouts start with byte 1, so the reader tries both and accepts only one that reads
-  cleanly, uses exactly all bytes and holds only values that layout could hold (slim
-  flags at most 3; earliest order 0 and flags at most 1); if both qualify, real WGS84
-  positions decide, then the slim layout wins.
+- **Older links**: the pre-release `#c=<base64url>` links are not supported (removed in
+  v0.7.0); `runCourseFromHash` refuses them as `unreadable`.
 - The QR library stays in the apps. The test vectors in `test/run.test.mjs` are shared
   with the apps.
 
@@ -184,8 +169,9 @@ const qr = QrCode.encodeSegments(
 
 Printed QR codes live for months, so the link format only ever grows:
 
-- Every change must keep decoding all earlier links and payloads, including the legacy
-  `#c=` links in both their layouts (the slim one and the earliest one of 2026-10-17).
+- Compatibility is guaranteed from the v0.6.0 format onwards: every change must keep
+  decoding all links and payloads of that format. Earlier pre-release formats (`#c=`
+  links) are not supported.
 - New data is added only additively: a new version byte, or a new flag that older readers
   refuse cleanly (`newer-version` / `unreadable`). Existing bytes are never reinterpreted.
 - The payload alphabet, the packing (two bytes as three characters), the coordinate

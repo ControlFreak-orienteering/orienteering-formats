@@ -19,18 +19,15 @@ This repository is **public**. Never commit secrets, keys or user data.
   on `dist/` and the map reader's tests in `src/map/*.test.ts` with Vitest.
 - **Course links (`src/run/`) must stay backward compatible.** Printed QR codes live for
   months, on maps nobody reprints.
-  - Every change must keep decoding every earlier link and payload: the current
-    `https://run.controlfreak.se/#<payload>` and the legacy `#c=<base64url>` links
-    (`https://run.controlfreak.se/#c=…`, `https://course.controlfreak.se/run#c=…`), which are
-    read but never written. The legacy `#c=` links come in two version 1 layouts: the slim
-    one (same bytes as the current payload, flags finish and start only) and the earliest
-    one (2026-10-17: version · radius · accuracy · order 0 · flags bit 0 = finish · name ·
-    controls · [finish], no start). `decodeLegacyRunCourse` tries both and accepts only a
-    layout that reads cleanly and uses exactly all bytes; keep both readable.
+  - Compatibility is guaranteed from the v0.6.0 format onwards: every change must keep
+    decoding every link and payload of the current format,
+    `https://run.controlfreak.se/#<payload>`. Earlier pre-release `#c=<base64url>` links were
+    never distributed and are not supported (removed in v0.7.0); `runCourseFromHash` refuses
+    them as `unreadable`.
   - Add new data only additively: a new version byte or a new flag that older readers
     refuse cleanly (`newer-version` for a version, `unreadable` for an unknown flag). Never
     reinterpret existing bytes.
   - Never change the payload alphabet, the packing, the coordinate resolution (1e-5°) or
     the link prefixes.
   - `test/run-frozen.test.mjs` pins exact payloads to exact courses. Never change or remove
-    a vector there; add one for every new version, flag or link form.
+    a vector there (the pre-release vectors were dropped in v0.7.0); add one for every new version, flag or link form.

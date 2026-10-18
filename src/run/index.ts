@@ -4,11 +4,9 @@
  */
 export { FormatError, type FormatErrorCode } from "../errors.js";
 export {
-  decodeLegacyRunCourse,
   decodeRunCourse,
   encodeRunCourse,
   RUN_FORMAT_VERSION,
-  RUN_LEGACY_URL_PREFIXES,
   RUN_ORIGIN,
   RUN_PATH,
   RUN_PAYLOAD_ALPHABET,
