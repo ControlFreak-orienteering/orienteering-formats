@@ -1,7 +1,7 @@
 {
   "name": "orienteering-formats",
-  "version": "0.5.0",
-  "description": "Shared file formats for ControlFreak and CompetitionFreak (.cfpack, .cfproj), and a reader that draws OCAD and OpenOrienteering Mapper maps as SVG.",
+  "version": "0.6.0",
+  "description": "Shared file formats for ControlFreak and CompetitionFreak (.cfpack, .cfproj), the QR course link for virtual controls, and a reader that draws OCAD and OpenOrienteering Mapper maps as SVG.",
   "license": "MIT",
   "author": "Henrik Flordal",
   "repository": {
@@ -28,6 +28,10 @@
     "./qr": {
       "types": "./dist/qr.d.ts",
       "import": "./dist/qr.js"
+    },
+    "./run": {
+      "types": "./dist/run/index.d.ts",
+      "import": "./dist/run/index.js"
     }
   },
   "files": [
