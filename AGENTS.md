@@ -5,8 +5,9 @@ This repository is **public**. Never commit secrets, keys or user data.
 - Code and comments are in English, and every exported function and type has a JSDoc
   comment.
 - Keep the package small. It holds only file formats, the types they need, the map
-  reader that draws map files as SVG (`src/map/`, its own entry point), and the QR film
-  start list and clock code (`orienteering-formats/qr`). App logic and UI stay in the apps.
+  reader that draws map files as SVG (`src/map/`, its own entry point), the QR film
+  start list and clock code (`orienteering-formats/qr`), and the course link for virtual
+  controls (`orienteering-formats/run`). App logic and UI stay in the apps.
 - Follow the change rules in README.md:
   - old files must stay readable,
   - versions follow semver,

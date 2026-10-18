@@ -6,6 +6,8 @@ File formats shared by orienteering apps:
 - **CompetitionFreak** (competition administration) reads them, and sends competitions and
   start lists as QR films.
 - **The start clock** (startklocka) reads start lists from CompetitionFreak's QR films.
+- **The runner app** (run.controlfreak.se) reads courses from the QR links ControlFreak
+  prints for virtual controls.
 
 Keeping the format code here means both apps read and write the files the same way, and
 a change to the format is a deliberate new version rather than a silent break.
@@ -15,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.3.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.6.0"
 ```
 
 Reading a pack or project file (e.g. in CompetitionFreak):
@@ -104,6 +106,62 @@ sampler.offset(); // { offsetMs, samples }, offsetMs > 0 when the sender is ahea
 
 Errors are `FormatError`s with a code (`wrong-format`, `unreadable`), for the app to put
 into words.
+
+## Course links for virtual controls
+
+`orienteering-formats/run` writes and reads the course in the QR links for the runner app:
+`https://run.controlfreak.se/#<payload>`. ControlFreak prints the link as a QR code; the
+runner app reads the course from `location.hash`. The course sits after `#`, so it never
+reaches a server.
+
+```ts
+import {
+  decodeRunCourse, encodeRunCourse, FormatError,
+  runCourseFromHash, runCourseQrSegments, runCourseUrl, type RunCourse,
+} from "orienteering-formats/run";
+
+const course: RunCourse = {
+  v: 1,
+  name: "Testbana",
+  start: { lat: 61.3, lng: 17.06 },          // or null
+  controls: [{ code: 31, lat: 61.3021, lng: 17.0635 }],
+  finish: { lat: 61.3002, lng: 17.0605 },    // or null
+  score: null,                               // or { timeLimitMinutes, penaltyPerMinute }
+};
+runCourseUrl(course); // "https://run.controlfreak.se/#160P..."
+
+try {
+  const read = runCourseFromHash(location.hash); // null when there is no fragment
+} catch (e) {
+  if (e instanceof FormatError) e.code; // "unreadable" | "newer-version"
+}
+
+// The QR code: the prefix as a byte segment, the payload as an alphanumeric segment.
+const { prefix, payload } = runCourseQrSegments(course);
+const qr = QrCode.encodeSegments(
+  [QrSegment.makeBytes([...new TextEncoder().encode(prefix)]), QrSegment.makeAlphanumeric(payload)],
+  QrCode.Ecc.MEDIUM,
+);
+```
+
+- **Payload**: binary, written with the 43 characters `0-9A-Z$*+-./:`, two bytes as three
+  characters and a last odd byte as two (like base45, RFC 9285, without space and `%`).
+  They are all in the QR alphanumeric mode and need no escaping in a URL fragment. The
+  whole fragment is the payload.
+- **Build the QR code from two segments.** Encoding the whole link as one text puts it in
+  byte mode, because the prefix is lower case, and loses the gain (version 12 instead of
+  10 for 25 controls).
+- **Content**: version byte, flags (finish, start, score course), name (UTF-8), and start,
+  controls (code, position) and finish. Positions are in 1e-5 degrees (about 1 m), each a
+  delta from the one before. A score course (rogaining) also has a time limit in minutes,
+  a penalty per started minute over it, and points per control. The byte layout is in
+  `src/run/course.ts`.
+- **Versions**: the first byte is the version, read before anything else; a payload from
+  a newer version is refused with `newer-version` without reading the rest.
+- **Size**: 25 controls over 3×3 km give a 224-character payload, a QR code of version 10
+  with error correction M.
+- The QR library stays in the apps. The test vectors in `test/run.test.mjs` are shared
+  with the apps.
 
 ## Map files
 
