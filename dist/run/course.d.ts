@@ -35,7 +35,7 @@
  *
  * Compatibility: printed codes live for months. Every release must keep reading every link
  * and payload an earlier release wrote, including the legacy `#c=<base64url>` links from
- * before v0.6.0 (read-only, see {@link decodeLegacyRunCourse}). New data is added only
+ * before v0.6.0 in both their layouts (read-only, see {@link decodeLegacyRunCourse}). New data is added only
  * with a new version byte or a new flag, which older readers refuse cleanly; existing bytes
  * are never reinterpreted. The alphabet, the packing, the coordinate resolution and the
  * link prefixes never change. The frozen vectors in `test/run-frozen.test.mjs` pin this.
@@ -148,14 +148,24 @@ export declare const RUN_LEGACY_URL_PREFIXES: readonly string[];
  * Reads a course in the legacy format of the `#c=` links that apps before v0.6.0 wrote
  * (see {@link RUN_LEGACY_URL_PREFIXES}). Read-only: the package never writes it.
  *
- * The legacy payload is base64url without padding of the same version 1 bytes as
- * {@link decodeRunCourse} reads, from a time when only the finish and start flags existed.
- * Legacy courses therefore have no score rules and their controls no points.
+ * The legacy payload is base64url without padding of version 1 bytes in one of two
+ * layouts, which both start with version byte 1:
+ *
+ * - the slim layout: the same bytes as {@link decodeRunCourse} reads, from a time when only
+ *   the finish and start flags existed;
+ * - the earliest layout (the first release, 2026-10-17), with radius, accuracy and order
+ *   bytes before the flags and no start. The stored radius and accuracy are ignored.
+ *
+ * Both layouts are tried. A layout is accepted only when it reads cleanly, uses exactly
+ * all bytes and holds only known values (slim flags at most 3; earliest order 0 and flags
+ * at most 1). If both qualify, the one whose positions are all real WGS84 positions wins,
+ * and the slim layout before the earliest. Legacy courses have no score rules and their
+ * controls no points.
  *
  * @param value - The base64url value after `c=`.
  * @returns The course, with `score: null`.
  * @throws {FormatError} `newer-version` when the version byte is above 1, `unreadable`
- *   when cut short, garbage, or carrying flags the legacy format did not have.
+ *   when cut short, garbage, or readable in neither layout.
  */
 export declare function decodeLegacyRunCourse(value: string): RunCourse;
 /**

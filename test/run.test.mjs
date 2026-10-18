@@ -373,3 +373,93 @@ test("refuses broken or newer legacy links", () => {
     "unreadable",
   );
 });
+
+/** Bytes of the earliest legacy layout (2026-10-17), as its encoder wrote them. */
+function earliestBytes({ radius = 20, accuracy = 30, order = 0, flags = null, name, controls, finish }) {
+  const out = [];
+  const varint = (n) => {
+    while (n >= 0x80) {
+      out.push((n % 0x80) | 0x80);
+      n = Math.floor(n / 0x80);
+    }
+    out.push(n);
+  };
+  const signed = (n) => varint(n < 0 ? -2 * n - 1 : 2 * n);
+  out.push(1);
+  varint(radius);
+  varint(accuracy);
+  out.push(order);
+  out.push(flags ?? (finish ? 1 : 0));
+  const utf8 = new TextEncoder().encode(name);
+  varint(utf8.length);
+  out.push(...utf8);
+  varint(controls.length);
+  let lat = 0;
+  let lng = 0;
+  const point = (p) => {
+    const la = Math.round(p.lat * 1e5);
+    const lo = Math.round(p.lng * 1e5);
+    signed(la - lat);
+    signed(lo - lng);
+    lat = la;
+    lng = lo;
+  };
+  for (const c of controls) {
+    varint(c.code);
+    point(c);
+  }
+  if (finish) point(finish);
+  return out;
+}
+
+test("reads the earliest legacy layout, without start and score", () => {
+  const c = course();
+  for (const radius of [0, 1, 3, 10, 25, 200]) {
+    for (const finish of [c.finish, null]) {
+      const value = toBase64Url(earliestBytes({ ...c, radius, finish }));
+      const back = decodeLegacyRunCourse(value);
+      assert.equal(back.name, "Blå 5 km");
+      assert.equal(back.start, null);
+      assert.equal(back.score, null);
+      assert.deepEqual(back.controls, c.controls);
+      assert.deepEqual(back.finish, finish);
+      assert.deepEqual(runCourseFromHash(`#c=${value}`), back);
+    }
+  }
+});
+
+test("refuses earliest-layout links with values it never wrote or cut short", () => {
+  const c = course();
+  const ok = earliestBytes(c);
+  const bad = [
+    earliestBytes({ ...c, order: 1 }),
+    earliestBytes({ ...c, flags: 2 }),
+    ok.slice(0, -3),
+    [...ok, 0],
+  ];
+  for (const bytes of bad) {
+    assert.equal(codeOf(() => decodeLegacyRunCourse(toBase64Url(bytes))), "unreadable");
+  }
+});
+
+test("slim legacy links still read as the slim layout", () => {
+  // Every slim legacy course of many shapes reads exactly as the current payload does.
+  const names = ["", "A", "Blå 5 km", "x".repeat(40)];
+  for (const name of names) {
+    for (const start of [null, { lat: 61.3, lng: 17.06 }]) {
+      for (const finish of [null, { lat: 61.3002, lng: 17.0605 }]) {
+        for (const n of [0, 1, 3, 12]) {
+          const controls = Array.from({ length: n }, (_, i) => ({
+            code: 31 + i,
+            lat: 61.3 + i * 0.0013,
+            lng: 17.06 - i * 0.0011,
+          }));
+          const c = course({ name, start, finish, controls });
+          const payload = encodeRunCourse(c);
+          const value = toBase64Url(fromPayload(payload));
+          assert.deepEqual(decodeLegacyRunCourse(value), decodeRunCourse(payload));
+        }
+      }
+    }
+  }
+});

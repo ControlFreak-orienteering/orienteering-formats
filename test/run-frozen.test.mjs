@@ -78,3 +78,45 @@ test("frozen: v0.6.0 score course", () => {
   assert.deepEqual(decodeRunCourse(payload), course);
   assert.deepEqual(fromLink(`https://run.controlfreak.se/#${payload}`), course);
 });
+
+// (d) Earliest legacy layout (Course, 2026-10-17): base64url after `#c=`, version byte 1
+// followed by radius, accuracy, order and flags, no start. Read-only (v0.6.2). The stored
+// radius (10 m) and accuracy (30 m) are ignored; the runner app's fixed rules apply.
+// This code is printed and in circulation.
+test("frozen: earliest legacy #c= layout, printed code \"Bana 2\"", () => {
+  const value = "AQoeAAEGQmFuYSAyAyacmewFlufNASeDAssDKIICxQGcApgE";
+  const course = {
+    v: 1,
+    name: "Bana 2",
+    start: null,
+    controls: [
+      { code: 38, lat: 61.2923, lng: 16.85963 },
+      { code: 39, lat: 61.291, lng: 16.85733 },
+      { code: 40, lat: 61.29229, lng: 16.85634 },
+    ],
+    finish: { lat: 61.29371, lng: 16.85902 },
+    score: null,
+  };
+  assert.deepEqual(decodeLegacyRunCourse(value), course);
+  assert.deepEqual(runCourseFromHash(`#c=${value}`), course);
+  assert.deepEqual(fromLink(`https://course.controlfreak.se/run#c=${value}`), course);
+  assert.deepEqual(fromLink(`https://run.controlfreak.se/#c=${value}`), course);
+});
+
+// (e) Earliest legacy layout, written by the encoder of 2026-10-17 (commit d443d7d in
+// orienteer-mapper-viewer) for the course of its own tests: radius 20 m, accuracy 30 m,
+// non-ASCII name, with and without a finish.
+test("frozen: earliest legacy #c= layout, \"Blå 5 km\" with and without finish", () => {
+  const controls = [
+    { code: 31, lat: 60.60512, lng: 17.06321 },
+    { code: 45, lat: 60.60733, lng: 17.06012 },
+    { code: 102, lat: 60.6041, lng: 17.0688 },
+  ];
+  const withFinish = "ARQeAAEJQmzDpSA1IGttAx_A5-MFoqXQAS26A-kEZoUFyA2zAcsN";
+  const withoutFinish = "ARQeAAAJQmzDpSA1IGttAx_A5-MFoqXQAS26A-kEZoUFyA0";
+  const course = (finish) => ({ v: 1, name: "Blå 5 km", start: null, controls, finish, score: null });
+  assert.deepEqual(decodeLegacyRunCourse(withFinish), course({ lat: 60.6032, lng: 17.0601 }));
+  assert.deepEqual(fromLink(`https://course.controlfreak.se/run#c=${withFinish}`), course({ lat: 60.6032, lng: 17.0601 }));
+  assert.deepEqual(decodeLegacyRunCourse(withoutFinish), course(null));
+  assert.deepEqual(fromLink(`https://course.controlfreak.se/run#c=${withoutFinish}`), course(null));
+});
