@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.7.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.8.0"
 ```
 
 Reading a pack or project file (e.g. in CompetitionFreak):
@@ -204,8 +204,10 @@ try {
   coordinates as the controls in the exchange section below. A course drawn in the same
   `viewBox` lands on the map without conversion.
 - **Legible rather than complete.** Point, line, area (with holes, hatching and
-  patterns) and text symbols are drawn; symbols spaced along a line (fence tags, cliff
-  ticks) are not.
+  patterns) and text symbols are drawn. In OCAD files, so are the symbols a line draws
+  along itself: a cliff's tags, a fence's ticks, a dotted boundary, pylons and slope
+  lines at corner points. Not yet drawn: a line's secondary symbols, and the symbols
+  along lines in `.omap` files.
 - **`.omap` files need a `DOMParser`.** Browsers have one; elsewhere pass `parseXml`
   (e.g. from `@xmldom/xmldom`).
 - The entry point also exports the lower-level readers ControlFreak uses: the parsed

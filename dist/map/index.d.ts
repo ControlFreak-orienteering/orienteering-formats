@@ -15,6 +15,6 @@ export { cmykToRgb } from "./ocad/colors.js";
 export { cropOcad, OcadCropError, type OcadRect } from "./ocad/crop.js";
 export { parseOcadFile } from "./ocad/parser.js";
 export { escapeXml, renderMapSvg, type RenderedMap, type RenderOptions, } from "./ocad/render-svg.js";
-export type { AreaSymbol, GeoReference, LineSymbol, MapObject, ObjectKind, OcadColor, OcadPoint, OcadSymbol, ParsedOcadMap, PointSymbol, PointSymbolElement, SymbolBase, SymbolKind, TextSymbol, UnsupportedSymbol, } from "./ocad/types.js";
+export type { AreaSymbol, GeoReference, LineDecorations, LineSymbol, MapObject, ObjectKind, OcadColor, OcadPoint, OcadSymbol, ParsedOcadMap, PointSymbol, PointSymbolElement, SymbolBase, SymbolKind, TextSymbol, UnsupportedSymbol, } from "./ocad/types.js";
 export { renderOmap, type OmapRender } from "./omap.js";
 export { cropOmapDoc, cropOmapXml, type OmapRect } from "./omap-crop.js";

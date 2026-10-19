@@ -83,6 +83,28 @@ export interface LineSymbol extends SymbolBase {
     rightWidth: number;
   };
   framing?: { color: number; width: number };
+  /** Symbols drawn along the line, see `LineDecorations`. Absent when there are none. */
+  decorations?: LineDecorations;
+}
+
+/**
+ * The small symbols a line symbol draws along itself: a cliff's tags, a fence's
+ * ticks, a power line's pylons, a contour's slope lines. Each is drawn like a
+ * point symbol, turned to follow the line: its x axis points along the line and
+ * its y axis to the left of it, so negative y lies to the right.
+ */
+export interface LineDecorations {
+  /** Repeated along the line, `mainLength` apart and `endLength` from its ends (see `LineSymbol.dashed`). */
+  primary: PointSymbolElement[];
+  /** How many primary symbols stand together at each place, and how far apart. */
+  primaryCount: number;
+  primaryDistance: number;
+  /** At each corner point (`OcadPoint.corner`), e.g. pylons or slope lines. */
+  corner: PointSymbolElement[];
+  /** At the line's first point. */
+  start: PointSymbolElement[];
+  /** At the line's last point. */
+  end: PointSymbolElement[];
 }
 
 /** An area symbol, e.g. a lake or a forest area. */
