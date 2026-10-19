@@ -9,12 +9,11 @@ function push(ops, map, colorNumber, markup) {
     ops.push({ order: colorOrder(map, colorNumber), markup });
 }
 /**
- * Renders a parsed OCAD map to an SVG fragment. This favours a legible,
- * correctly-colored base map over full cartographic fidelity: decorative
- * symbols spaced along lines (fences, cliffs with tick marks, etc.) are
- * not drawn. Plain point symbols, line symbols (incl. double lines and
- * framing), area symbols (incl. holes, bezier curves, hatch lines and
- * repeating-icon "structure" fills) render at full fidelity.
+ * Renders a parsed OCAD map to an SVG fragment. Point symbols, line symbols
+ * (incl. double lines, framing and the symbols drawn along them, such as a
+ * cliff's tags or a contour's slope lines), area symbols (incl. holes, bezier
+ * curves, hatch lines and repeating-icon "structure" fills) are drawn. Not
+ * drawn: a line's secondary symbols, and the different first and last dash.
  *
  * @param map - The map from `parseOcadFile`.
  * @param options - See `RenderOptions`.
@@ -183,6 +182,226 @@ function renderLineObject(obj, symbol, map, ops) {
     if (symbol.lineWidth > 0) {
         push(ops, map, symbol.lineColor, strokePath(d, colorRgb(map, symbol.lineColor), symbol.lineWidth, dash));
     }
+    if (symbol.decorations)
+        renderLineDecorations(obj, symbol, symbol.decorations, map, ops);
+}
+/** Straight pieces per Bezier curve: plenty for symbols a millimetre apart. */
+const BEZIER_STEPS = 12;
+/**
+ * The line as straight pieces, one per sub-path (`holeStart`), with Bezier
+ * curves sampled. Control points are not part of the line; only the vertices
+ * through which it passes can be corners.
+ */
+function flattenLine(points) {
+    const lines = [];
+    let current = null;
+    let cp1 = null;
+    let cp2 = null;
+    for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        if (i > 0 && p.bezierFirst) {
+            cp1 = p;
+            continue;
+        }
+        if (i > 0 && p.bezierSecond) {
+            cp2 = p;
+            continue;
+        }
+        if (!current || p.holeStart) {
+            current = { points: [{ x: p.x, y: p.y }], corners: [] };
+            lines.push(current);
+        }
+        else {
+            const from = current.points[current.points.length - 1];
+            if (cp1 && cp2) {
+                for (let k = 1; k <= BEZIER_STEPS; k++) {
+                    const t = k / BEZIER_STEPS;
+                    const u = 1 - t;
+                    const a = u * u * u;
+                    const b = 3 * u * u * t;
+                    const c = 3 * u * t * t;
+                    const e = t * t * t;
+                    current.points.push({
+                        x: a * from.x + b * cp1.x + c * cp2.x + e * p.x,
+                        y: a * from.y + b * cp1.y + c * cp2.y + e * p.y,
+                    });
+                }
+            }
+            else {
+                current.points.push({ x: p.x, y: p.y });
+            }
+        }
+        cp1 = cp2 = null;
+        if (p.corner)
+            current.corners.push(current.points.length - 1);
+    }
+    return lines;
+}
+/** The direction from one point to another, in radians with y up. */
+function heading(a, b) {
+    return Math.atan2(b.y - a.y, b.x - a.x);
+}
+/**
+ * Where symbols repeated along a line stand, as distances from its start.
+ *
+ * Solid lines (a cliff, a fence): one at `endLength` from each end and the
+ * rest evenly between, about `mainLength` apart, so that both ends look the
+ * same. A line too short for that gets one in the middle. Dashed lines get one
+ * in the middle of each dash, following the same rhythm as `dashArray`.
+ */
+function repeatPositions(length, symbol) {
+    const { mainLength, endLength, mainGap } = symbol.dashed;
+    if (!(length > 0) || !(mainLength > 0))
+        return length > 0 ? [length / 2] : [];
+    if (mainGap > 0 && dashArray(symbol)) {
+        const out = [];
+        for (let s = mainLength / 2; s < length; s += mainLength + mainGap)
+            out.push(s);
+        return out;
+    }
+    const usable = length - 2 * Math.max(0, endLength);
+    if (usable <= 0)
+        return [length / 2];
+    const n = Math.max(1, Math.round(usable / mainLength));
+    const step = usable / n;
+    const out = [];
+    for (let i = 0; i <= n; i++)
+        out.push(endLength + i * step);
+    return out;
+}
+/** The places along a flattened line at the given distances from its start. */
+function placesAlong(line, distances) {
+    const pts = line.points;
+    const places = [];
+    let i = 0;
+    let walked = 0;
+    for (const s of distances) {
+        while (i < pts.length - 2) {
+            const piece = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
+            if (walked + piece >= s)
+                break;
+            walked += piece;
+            i++;
+        }
+        const a = pts[i];
+        const b = pts[i + 1];
+        const piece = Math.hypot(b.x - a.x, b.y - a.y);
+        const t = piece > 0 ? Math.min(1, Math.max(0, (s - walked) / piece)) : 0;
+        places.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle: heading(a, b) });
+    }
+    return places;
+}
+/** The line's length along its straight pieces. */
+function lineLength(line) {
+    let length = 0;
+    for (let i = 1; i < line.points.length; i++) {
+        length += Math.hypot(line.points[i].x - line.points[i - 1].x, line.points[i].y - line.points[i - 1].y);
+    }
+    return length;
+}
+/** The first point on a piece of real length, from `from` in steps of `step`. */
+function nextDistinct(points, from, step) {
+    for (let j = from + step; j >= 0 && j < points.length; j += step) {
+        const p = points[j];
+        if (p.x !== points[from].x || p.y !== points[from].y)
+            return p;
+    }
+    return null;
+}
+/**
+ * Draws the symbols a line symbol puts along its line (see `LineDecorations`).
+ *
+ * The same element, colour and width repeats hundreds of times along a long
+ * cliff, so the pieces are gathered per kind and drawn as one path each,
+ * instead of one SVG element per tag.
+ */
+function renderLineDecorations(obj, symbol, decorations, map, ops) {
+    const strokes = new Map();
+    const fills = new Map();
+    const dots = [];
+    const draw = (elements, at) => {
+        const cos = Math.cos(at.angle);
+        const sin = Math.sin(at.angle);
+        const place = (p) => ({
+            ...p,
+            x: at.x + p.x * cos - p.y * sin,
+            y: at.y + p.x * sin + p.y * cos,
+        });
+        for (const el of elements) {
+            const points = el.points.map(place);
+            if (el.type === "line") {
+                if (el.lineWidth <= 0)
+                    continue;
+                const key = `${el.color}|${el.lineWidth}`;
+                const entry = strokes.get(key) ?? { color: el.color, width: el.lineWidth, d: [] };
+                entry.d.push(pathData(points, false));
+                strokes.set(key, entry);
+            }
+            else if (el.type === "area") {
+                const list = fills.get(el.color) ?? [];
+                list.push(pathData(points, true));
+                fills.set(el.color, list);
+            }
+            else {
+                dots.push({ color: el.color, markup: renderElement({ ...el, points }, (p) => p, map) });
+            }
+        }
+    };
+    for (const line of flattenLine(obj.coordinates)) {
+        const pts = line.points;
+        if (pts.length < 2)
+            continue;
+        if (decorations.primary.length) {
+            const count = Math.max(1, decorations.primaryCount);
+            const spread = (count - 1) * decorations.primaryDistance;
+            const length = lineLength(line);
+            const centres = repeatPositions(length, symbol);
+            // Several symbols in a group stand `primaryDistance` apart, centred on the place.
+            const distances = centres.flatMap((c) => Array.from({ length: count }, (_, k) => Math.min(length, Math.max(0, c - spread / 2 + k * decorations.primaryDistance))));
+            for (const at of placesAlong(line, distances))
+                draw(decorations.primary, at);
+        }
+        if (decorations.corner.length) {
+            for (const i of line.corners) {
+                const p = pts[i];
+                const before = nextDistinct(pts, i, -1);
+                const after = nextDistinct(pts, i, 1);
+                // Halfway between the directions in and out, so the symbol stands
+                // square to the bend; at an end, the one direction there is.
+                let angle;
+                if (before && after) {
+                    const a = heading(before, p);
+                    const b = heading(p, after);
+                    angle = Math.atan2(Math.sin(a) + Math.sin(b), Math.cos(a) + Math.cos(b));
+                }
+                else if (after)
+                    angle = heading(p, after);
+                else if (before)
+                    angle = heading(before, p);
+                else
+                    continue;
+                draw(decorations.corner, { x: p.x, y: p.y, angle });
+            }
+        }
+        if (decorations.start.length) {
+            const after = nextDistinct(pts, 0, 1);
+            if (after)
+                draw(decorations.start, { ...pts[0], angle: heading(pts[0], after) });
+        }
+        if (decorations.end.length) {
+            const last = pts.length - 1;
+            const before = nextDistinct(pts, last, -1);
+            if (before)
+                draw(decorations.end, { ...pts[last], angle: heading(before, pts[last]) });
+        }
+    }
+    for (const s of strokes.values()) {
+        push(ops, map, s.color, strokePath(s.d.join(" "), colorRgb(map, s.color), s.width, null));
+    }
+    for (const [color, d] of fills)
+        push(ops, map, color, fillPath(d.join(" "), colorRgb(map, color)));
+    for (const dot of dots)
+        push(ops, map, dot.color, dot.markup);
 }
 /**
  * The same line, moved `distance` units to the side.

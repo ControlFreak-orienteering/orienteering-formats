@@ -205,8 +205,8 @@ function readLineSymbolV8(reader: BinaryReader, base: BaseFields): LineSymbol {
   const secondaryGap = reader.smallInt();
   const endGap = reader.smallInt();
   reader.smallInt(); // minimum length of a symbol-decorated line
-  reader.smallInt(); // number of main symbols
-  reader.smallInt(); // distance between main symbols
+  const primaryCount = reader.smallInt();
+  const primaryDistance = reader.smallInt();
 
   const dblMode = reader.word();
   const dblFlags = reader.word();
@@ -232,13 +232,19 @@ function readLineSymbolV8(reader: BinaryReader, base: BaseFields): LineSymbol {
   reader.byte();
   reader.byte();
 
-  // The decorations along the line are read past, as in newer files: they
-  // are not drawn yet (see render-svg.ts).
-  readSymbolElements(reader, primDataSize);
+  // The decorations along the line (a cliff's tags, a fence's ticks, a
+  // power line's pylons). Unknown primitives in them are not reported, as
+  // elsewhere in line symbols. The secondary symbols (between the primary
+  // ones) are read past: they are rare and not drawn.
+  const primary = readSymbolElements(reader, primDataSize);
   readSymbolElements(reader, secDataSize);
-  readSymbolElements(reader, cornerDataSize);
-  readSymbolElements(reader, startDataSize);
-  readSymbolElements(reader, endDataSize);
+  const corner = readSymbolElements(reader, cornerDataSize);
+  const start = readSymbolElements(reader, startDataSize);
+  const end = readSymbolElements(reader, endDataSize);
+  const decorations =
+    primary.length || corner.length || start.length || end.length
+      ? { primary, primaryCount, primaryDistance, corner, start, end }
+      : undefined;
 
   return {
     kind: "line",
@@ -246,6 +252,7 @@ function readLineSymbolV8(reader: BinaryReader, base: BaseFields): LineSymbol {
     lineColor,
     lineWidth,
     dashed: { mainLength, mainGap, secondaryGap, endLength, endGap },
+    ...(decorations ? { decorations } : {}),
     ...(dblMode > 0
       ? {
           doubleLine: {

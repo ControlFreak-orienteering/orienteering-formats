@@ -45,6 +45,7 @@ export {
 export type {
   AreaSymbol,
   GeoReference,
+  LineDecorations,
   LineSymbol,
   MapObject,
   ObjectKind,

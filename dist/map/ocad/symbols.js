@@ -118,8 +118,8 @@ function readLineSymbol(reader, base, onUnknown) {
     const secondaryGap = reader.smallInt();
     const endGap = reader.smallInt();
     reader.smallInt(); // minimum length for a symbol-decorated line
-    reader.smallInt(); // number of primary symbols
-    reader.smallInt(); // primary symbol spacing
+    const primaryCount = reader.smallInt();
+    const primaryDistance = reader.smallInt();
     const dblMode = reader.word();
     const dblFlags = reader.word();
     const dblFillColor = reader.smallInt();
@@ -143,21 +143,25 @@ function readLineSymbol(reader, base, onUnknown) {
     const endDataSize = reader.word();
     reader.byte(); // use-symbol flags
     reader.byte(); // reserved
-    // The decorations along the line (a fence's tags, a power line's
-    // pylons) are read to get past them; they are not drawn yet. Unknown
-    // primitives in them are therefore not reported: that would be noise
-    // about something that is not shown anyway.
-    readSymbolElements(reader, primDataSize);
+    // The decorations along the line (a cliff's tags, a fence's ticks, a
+    // power line's pylons). Unknown primitives in them are not reported, as
+    // elsewhere in line symbols. The secondary symbols (between the primary
+    // ones) are read past: they are rare and not drawn.
+    const primary = readSymbolElements(reader, primDataSize);
     readSymbolElements(reader, secDataSize);
-    readSymbolElements(reader, cornerDataSize);
-    readSymbolElements(reader, startDataSize);
-    readSymbolElements(reader, endDataSize);
+    const corner = readSymbolElements(reader, cornerDataSize);
+    const start = readSymbolElements(reader, startDataSize);
+    const end = readSymbolElements(reader, endDataSize);
+    const decorations = primary.length || corner.length || start.length || end.length
+        ? { primary, primaryCount, primaryDistance, corner, start, end }
+        : undefined;
     return {
         kind: "line",
         ...base,
         lineColor,
         lineWidth,
         dashed: { mainLength, mainGap, secondaryGap, endLength, endGap },
+        ...(decorations ? { decorations } : {}),
         ...(dblMode > 0
             ? {
                 doubleLine: {

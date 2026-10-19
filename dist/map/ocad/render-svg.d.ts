@@ -12,12 +12,11 @@ export interface RenderedMap {
     viewBox: string;
 }
 /**
- * Renders a parsed OCAD map to an SVG fragment. This favours a legible,
- * correctly-colored base map over full cartographic fidelity: decorative
- * symbols spaced along lines (fences, cliffs with tick marks, etc.) are
- * not drawn. Plain point symbols, line symbols (incl. double lines and
- * framing), area symbols (incl. holes, bezier curves, hatch lines and
- * repeating-icon "structure" fills) render at full fidelity.
+ * Renders a parsed OCAD map to an SVG fragment. Point symbols, line symbols
+ * (incl. double lines, framing and the symbols drawn along them, such as a
+ * cliff's tags or a contour's slope lines), area symbols (incl. holes, bezier
+ * curves, hatch lines and repeating-icon "structure" fills) are drawn. Not
+ * drawn: a line's secondary symbols, and the different first and last dash.
  *
  * @param map - The map from `parseOcadFile`.
  * @param options - See `RenderOptions`.
