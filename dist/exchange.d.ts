@@ -4,7 +4,7 @@
  * A project file also carries the writing app's own course model (`work`). That model
  * is large, belongs to ControlFreak and changes with it, so other apps should not read
  * it. The exchange section is the stable part: ControlFreak writes it next to `work`,
- * and CompetitionFreak reads only this.
+ * and ControlFreak Event reads only this.
  *
  * Rules:
  * - The whole section is optional. Files written before v0.2.0 have none, and reading

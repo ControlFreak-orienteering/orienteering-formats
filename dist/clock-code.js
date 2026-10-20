@@ -1,7 +1,7 @@
 /**
  * A "clock code": a QR code that shows the sending computer's clock, so that a device with
  * a camera (e.g. the start clock, startklocka) can set itself to the same time as
- * CompetitionFreak without network.
+ * ControlFreak Event without network.
  *
  * The sender redraws the code several times a second, each time with its current time:
  *

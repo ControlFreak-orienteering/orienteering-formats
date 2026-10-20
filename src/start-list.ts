@@ -1,9 +1,9 @@
 /**
- * A start list for the start clock (startklocka): who starts when, sent from CompetitionFreak,
+ * A start list for the start clock (startklocka): who starts when, sent from ControlFreak Event,
  * typically as a QR film (see `qr-film.ts`) to a phone or tablet at the start.
  *
  * JSON with a format name and a version, so that a start clock built against version 1 can
- * keep reading lists from later versions of CompetitionFreak:
+ * keep reading lists from later versions of ControlFreak Event:
  *
  * ```json
  * {

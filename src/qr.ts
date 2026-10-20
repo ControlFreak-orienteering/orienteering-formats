@@ -1,6 +1,6 @@
 /**
  * The QR film, the start list and the clock code, for moving data between devices with a
- * camera (e.g. from CompetitionFreak to the start clock). A separate entry point, so that apps which
+ * camera (e.g. from ControlFreak Event to the start clock). A separate entry point, so that apps which
  * only read course files do not carry it.
  */
 export {
