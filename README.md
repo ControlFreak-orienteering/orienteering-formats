@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.8.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.9.0"
 ```
 
 Reading a pack or project file (e.g. in CompetitionFreak):
@@ -34,7 +34,7 @@ try {
     const envelope = readProjectFile(await file.text());
   }
 } catch (e) {
-  if (e instanceof FormatError) e.code; // "wrong-format" | "newer-version" | "unreadable"
+  if (e instanceof FormatError) e.code; // "wrong-format" | "newer-version" | "unreadable" | "empty"
 }
 ```
 
@@ -57,6 +57,8 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
 - **`.cfproj`**: a project as indented JSON, without the map. See `src/cfproj.ts`.
 - **`.cfpack`**: the same JSON as a header, followed by the map file, in one binary
   file. The byte layout is documented in `src/cfpack.ts`.
+- **IOF XML CourseData and Purple Pen** course files, read into the same form as the
+  exchange section; see "Course files from other programs".
 - **Errors** are a `FormatError` with a `code`; each app turns the code into its own
   text.
 
@@ -178,6 +180,42 @@ Printed QR codes live for months, so the link format only ever grows:
   resolution (1e-5 degrees) and the link prefixes never change.
 - `test/run-frozen.test.mjs` pins exact payloads to exact decoded courses. Its vectors are
   never changed or removed; every new version gets a new vector there.
+
+## Course files from other programs
+
+`orienteering-formats/iof` and `orienteering-formats/purple-pen` read the course files
+other programs write, and give the courses in the same form as the exchange section
+below (a `CourseSet`: a `CourseExchange` whose courses may also carry `family`,
+`classNames` and `partlyRead`), so an app reads every course file the same way.
+
+- **IOF XML CourseData**, versions 3.0 and 2.0.3 (OCAD, Condes, Purple Pen,
+  ControlFreak): `readIofCourseData` gives the courses, `version` and `eventName`.
+  A forked 3.0 course is written as one course per variation with a shared
+  `family`; score courses have `order: "free"` and `scores`. Positions are
+  millimetres on the printed map (`map.metersPerUnit` is the scale over 1000), with
+  `lat`/`lng` when the file has `<Position>`; 2.0.3 files have no positions on the
+  earth.
+- **Purple Pen** (.ppen): `readPurplePen` gives the courses, `title` and `mapFileName`.
+  Purple Pen has no positions on the earth; an app that needs them reads the named
+  map's georeference with `orienteering-formats/map` and converts the millimetres. A
+  forked course is read along its first variation and marked `partlyRead`.
+- `isForkedCourse(set, course)` says whether a course is forked in any of these ways.
+- `decodeXmlBytes` turns a file's bytes into text by the encoding it declares (older
+  files are often ISO-8859-1), and `looksLikeIofCourseData` / `looksLikePurplePen`
+  recognise a file by its content.
+- Errors are `FormatError`s: `unreadable` (broken XML), `wrong-format` (not that kind
+  of file) and `empty` (no courses). The readers use the browser's `DOMParser`; pass
+  `parseXml` (e.g. from `@xmldom/xmldom`) where there is none.
+
+```ts
+import { decodeXmlBytes } from "orienteering-formats";
+import { looksLikeIofCourseData, readIofCourseData } from "orienteering-formats/iof";
+import { looksLikePurplePen, readPurplePen } from "orienteering-formats/purple-pen";
+
+const text = decodeXmlBytes(new Uint8Array(await file.arrayBuffer()));
+const set = looksLikePurplePen(text) ? readPurplePen(text) : readIofCourseData(text);
+set.courses[0]?.controls; // control ids, start to finish, as in the exchange section
+```
 
 ## Map files
 

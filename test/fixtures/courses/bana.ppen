@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<course-scribe-event>
+  <event id="1">
+    <title>Fixtur</title>
+    <map kind="OCAD" scale="10000" ignore-missing-fonts="false" absolute-path="C:\Kartor\karta.omap">..\Kartor\karta.omap</map>
+  </event>
+  <control id="1" kind="start">
+    <location x="0" y="0" />
+  </control>
+  <control id="2" kind="normal">
+    <code>31</code>
+    <location x="10" y="20" />
+  </control>
+  <control id="3" kind="normal">
+    <code>32</code>
+    <location x="40" y="25" />
+  </control>
+  <control id="4" kind="crossing-point" orientation="0">
+    <location x="45" y="40" />
+  </control>
+  <control id="5" kind="normal">
+    <code>33</code>
+    <location x="30" y="60" />
+  </control>
+  <control id="6" kind="finish">
+    <location x="60" y="60" />
+  </control>
+  <course id="1" kind="normal" order="1">
+    <name>Kort</name>
+    <first course-control="1" />
+  </course>
+  <course id="2" kind="normal" order="2">
+    <name>Gafflad</name>
+    <first course-control="10" />
+  </course>
+  <course id="3" kind="score" order="3">
+    <name>Poäng</name>
+    <first course-control="20" />
+  </course>
+  <course-control id="1" control="1">
+    <next course-control="2" />
+  </course-control>
+  <course-control id="2" control="2">
+    <next course-control="3" />
+  </course-control>
+  <course-control id="3" control="3">
+    <next course-control="4" />
+  </course-control>
+  <course-control id="4" control="4">
+    <next course-control="5" />
+  </course-control>
+  <course-control id="5" control="5">
+    <next course-control="6" />
+  </course-control>
+  <course-control id="6" control="6" />
+  <course-control id="10" control="1">
+    <next course-control="11" />
+  </course-control>
+  <course-control id="11" control="2" variation="fork" variation-end="13">
+    <next course-control="13" />
+    <variation course-control="12" />
+  </course-control>
+  <course-control id="12" control="3">
+    <next course-control="13" />
+  </course-control>
+  <course-control id="13" control="6" />
+  <course-control id="20" control="2" points="10">
+    <next course-control="21" />
+  </course-control>
+  <course-control id="21" control="3" points="20" />
+</course-scribe-event>

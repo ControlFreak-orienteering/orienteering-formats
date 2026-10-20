@@ -26,6 +26,7 @@ export {
   type ProjectEnvelope,
   type ProjectInfo,
 } from "./cfproj.js";
+export { isForkedCourse, type CourseSet, type CourseSetCourse } from "./courses.js";
 export { FormatError, type FormatErrorCode } from "./errors.js";
 export {
   parseCourseExchange,
@@ -39,3 +40,4 @@ export {
   type ExchangeProjection,
   type ExchangeVariation,
 } from "./exchange.js";
+export { decodeXmlBytes, type XmlParse } from "./xml.js";
