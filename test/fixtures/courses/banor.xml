@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0" creator="Fixtur">
+  <Event>
+    <Name>Fixtur</Name>
+  </Event>
+  <RaceCourseData>
+    <Map>
+      <Scale>10000</Scale>
+    </Map>
+    <Control type="Start">
+      <Id>S1</Id>
+      <Position lng="17.0721262" lat="61.3003202"/>
+      <MapPosition unit="mm" x="0" y="0"/>
+    </Control>
+    <Control>
+      <Id>31</Id>
+      <Position lng="17.0741101" lat="61.3020860"/>
+      <MapPosition unit="mm" x="10" y="20"/>
+    </Control>
+    <Control>
+      <Id>32</Id>
+      <Position lng="17.0797361" lat="61.3024490"/>
+      <MapPosition unit="mm" x="40" y="25"/>
+    </Control>
+    <Control type="CrossingPoint">
+      <Id>CROSS1</Id>
+      <Position lng="17.0807580" lat="61.3037804"/>
+      <MapPosition unit="mm" x="45" y="40"/>
+    </Control>
+    <Control>
+      <Id>33</Id>
+      <Position lng="17.0780785" lat="61.3056176"/>
+      <MapPosition unit="mm" x="30" y="60"/>
+    </Control>
+    <Control type="Finish">
+      <Id>F1</Id>
+      <Position lng="17.0836754" lat="61.3055318"/>
+      <MapPosition unit="mm" x="60" y="60"/>
+    </Control>
+    <Course>
+      <Name>Kort</Name>
+      <Length>900</Length>
+      <CourseControl type="Start"><Control>S1</Control></CourseControl>
+      <CourseControl type="Control"><Control>31</Control></CourseControl>
+      <CourseControl type="Control"><Control>32</Control></CourseControl>
+      <CourseControl type="CrossingPoint" specialInstruction="MandatoryCrossingPoint"><Control>CROSS1</Control></CourseControl>
+      <CourseControl type="Control"><Control>33</Control></CourseControl>
+      <CourseControl type="Finish"><Control>F1</Control></CourseControl>
+    </Course>
+    <Course>
+      <Name>Gafflad AB</Name>
+      <CourseFamily>Gafflad</CourseFamily>
+      <CourseControl type="Start"><Control>S1</Control></CourseControl>
+      <CourseControl type="Control"><Control>31</Control></CourseControl>
+      <CourseControl type="Finish"><Control>F1</Control></CourseControl>
+    </Course>
+    <Course>
+      <Name>Gafflad BA</Name>
+      <CourseFamily>Gafflad</CourseFamily>
+      <CourseControl type="Start"><Control>S1</Control></CourseControl>
+      <CourseControl type="Control"><Control>32</Control></CourseControl>
+      <CourseControl type="Finish"><Control>F1</Control></CourseControl>
+    </Course>
+    <Course>
+      <Name>Poäng</Name>
+      <CourseControl type="Start"><Control>S1</Control></CourseControl>
+      <CourseControl type="Control"><Control>31</Control><Score>10</Score></CourseControl>
+      <CourseControl type="Control"><Control>32</Control><Score>20</Score></CourseControl>
+      <CourseControl type="Finish"><Control>F1</Control></CourseControl>
+    </Course>
+  </RaceCourseData>
+</CourseData>

@@ -6,8 +6,10 @@ This repository is **public**. Never commit secrets, keys or user data.
   comment.
 - Keep the package small. It holds only file formats, the types they need, the map
   reader that draws map files as SVG (`src/map/`, its own entry point), the QR film
-  start list and clock code (`orienteering-formats/qr`), and the course link for virtual
-  controls (`orienteering-formats/run`). App logic and UI stay in the apps.
+  start list and clock code (`orienteering-formats/qr`), the course link for virtual
+  controls (`orienteering-formats/run`), and the readers of other programs' course
+  files (`orienteering-formats/iof`, `orienteering-formats/purple-pen`), which give
+  courses in the exchange section's form. App logic and UI stay in the apps.
 - Follow the change rules in README.md:
   - old files must stay readable,
   - versions follow semver,
