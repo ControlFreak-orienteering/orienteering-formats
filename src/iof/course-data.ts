@@ -18,13 +18,15 @@
  *
  * Only what the apps use is read. Unknown elements are ignored.
  *
- * Positions: `<MapPosition>` is millimetres on the printed map. The 3.0 values are
- * given as the file has them, while 2.0.3 exports (e.g. OCAD) count y upwards and are
- * flipped to the exchange section's y-down rule. `<Position>` (3.0 only) gives
- * `lat`/`lng`, which a program writes only when its map is georeferenced.
+ * Positions: `<MapPosition>` is millimetres on the printed map, counted with y upwards
+ * as the map's own grid does (so OCAD, Purple Pen and ControlFreak write it), and flipped
+ * here to the exchange section's y-down rule in both versions. `<Position>` (3.0 only)
+ * gives `lat`/`lng`, which a program writes only when its map is georeferenced. A point
+ * without a `<MapPosition>` is kept at (0, 0) and listed in `unpositioned`, so the
+ * courses keep their order and an app can say what is missing.
  */
 
-import type { CourseSet, CourseSetCourse } from "../courses.js";
+import type { CourseSet, CourseSetCourse, CourseSetTapedRoute } from "../courses.js";
 import { FormatError } from "../errors.js";
 import type { ExchangeControl, ExchangeControlKind, ExchangeVariation } from "../exchange.js";
 import {
@@ -46,6 +48,11 @@ export type IofCourseData = CourseSet & {
   version: IofVersion;
   /** The event's name, or "" when the file has none. */
   eventName: string;
+  /**
+   * Ids of the points the file gives no position on the map for (they are at (0, 0) in
+   * `controls`). A file from a results system often has codes but no positions.
+   */
+  unpositioned: string[];
 };
 
 /** Options for `readIofCourseData`. */
@@ -98,7 +105,10 @@ const KIND_V3: Record<string, ExchangeControlKind | undefined> = {
   EndOfMarkedRoute: "crossing",
 };
 
-function readVersion3(root: Element): CourseSet {
+/** What the version readers give: the courses and the points without a position. */
+type ReadCourses = CourseSet & { unpositioned: string[] };
+
+function readVersion3(root: Element): ReadCourses {
   // A file may hold several races; the first one is used.
   const race = childElement(root, "RaceCourseData");
   if (!race) throw new FormatError("empty");
@@ -121,6 +131,7 @@ function readVersion3(root: Element): CourseSet {
 
   const controls: ExchangeControl[] = [];
   const known = new Set<string>();
+  const unpositioned: string[] = [];
   for (const element of childElements(race, "Control")) {
     const id = childText(element, "Id");
     if (!id || known.has(id)) continue;
@@ -137,13 +148,17 @@ function readVersion3(root: Element): CourseSet {
     const mapPosition = childElement(element, "MapPosition");
     const lat = numberOf(position?.getAttribute("lat"));
     const lng = numberOf(position?.getAttribute("lng"));
+    const x = numberOf(mapPosition?.getAttribute("x"));
+    const y = numberOf(mapPosition?.getAttribute("y"));
+    if (x === undefined || y === undefined) unpositioned.push(id);
     controls.push({
       id,
       kind,
       codes: kind === "control" ? (units.length > 0 ? units : idAsCode) : [],
       ...(kind === "control" ? {} : { label: id }),
-      x: numberOf(mapPosition?.getAttribute("x")) ?? 0,
-      y: numberOf(mapPosition?.getAttribute("y")) ?? 0,
+      x: x ?? 0,
+      // The map counts y upwards; the exchange rule is y downwards.
+      y: y === undefined ? 0 : -y,
       ...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
     });
   }
@@ -171,16 +186,25 @@ function readVersion3(root: Element): CourseSet {
       );
     const sequence: string[] = [];
     let scores: Record<string, number> | undefined;
+    const tapedRoutes: CourseSetTapedRoute[] = [];
     for (const cc of courseControls) {
       // When a course control lists alternatives, the first one is used.
       const id = childText(cc, "Control");
       if (!id) continue;
       sequence.push(id);
+      // A marked route on the leg to this point: taped all the way, or a funnel at
+      // the end. A mandatory crossing point is a kind of its own, not a route.
+      const instruction = cc.getAttribute("specialInstruction");
+      if (instruction === "TapedRoute") tapedRoutes.push({ to: sequence.length - 1, kind: "all" });
+      else if (instruction === "FunnelTapedRoute") {
+        tapedRoutes.push({ to: sequence.length - 1, kind: "funnel" });
+      }
       // A point a course refers to but the file does not define is kept as a control
       // without a position, so the course keeps its order and the app can say what is
       // missing.
       if (!known.has(id)) {
         known.add(id);
+        unpositioned.push(id);
         controls.push({
           id,
           kind: kindFromCourses.get(id) ?? "control",
@@ -206,17 +230,24 @@ function readVersion3(root: Element): CourseSet {
       ...(scores ? { scores } : {}),
       ...(family ? { family } : {}),
       ...(classNames ? { classNames } : {}),
+      ...(tapedRoutes.length > 0 ? { tapedRoutes } : {}),
     };
   });
 
-  return { ...mapFacts(childText(childElement(race, "Map"), "Scale")), controls, courses };
+  return {
+    ...mapFacts(childText(childElement(race, "Map"), "Scale")),
+    controls,
+    courses,
+    unpositioned,
+  };
 }
 
 // -------------------------------------------------------------- IOF XML 2.0.3
 
-function readVersion2(root: Element): CourseSet {
+function readVersion2(root: Element): ReadCourses {
   const controls: ExchangeControl[] = [];
   const known = new Set<string>();
+  const unpositioned: string[] = [];
 
   /** Reads one kind of point: <StartPoint>, <Control> or <FinishPoint>. */
   const readPoints = (elementName: string, codeName: string, kind: ExchangeControlKind) => {
@@ -226,14 +257,17 @@ function readVersion2(root: Element): CourseSet {
       if (!code || known.has(id)) continue;
       known.add(id);
       const mapPosition = childElement(element, "MapPosition");
+      const x = numberOf(mapPosition?.getAttribute("x"));
+      const y = numberOf(mapPosition?.getAttribute("y"));
+      if (x === undefined || y === undefined) unpositioned.push(id);
       controls.push({
         id,
         kind,
         codes: kind === "control" && /^\d+$/.test(code) ? [Number(code)] : [],
         ...(kind === "control" ? {} : { label: code }),
-        x: numberOf(mapPosition?.getAttribute("x")) ?? 0,
-        // 2.0.3 exports (e.g. OCAD) count y upwards; the exchange rule is y downwards.
-        y: -(numberOf(mapPosition?.getAttribute("y")) ?? 0),
+        x: x ?? 0,
+        // The map counts y upwards; the exchange rule is y downwards.
+        y: y === undefined ? 0 : -y,
       });
     }
   };
@@ -294,5 +328,10 @@ function readVersion2(root: Element): CourseSet {
     };
   });
 
-  return { ...mapFacts(childText(childElement(root, "Map"), "Scale")), controls, courses };
+  return {
+    ...mapFacts(childText(childElement(root, "Map"), "Scale")),
+    controls,
+    courses,
+    unpositioned,
+  };
 }
