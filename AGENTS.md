@@ -9,7 +9,8 @@ This repository is **public**. Never commit secrets, keys or user data.
   start list and clock code (`orienteering-formats/qr`), the course link for virtual
   controls (`orienteering-formats/run`), and the readers of other programs' course
   files (`orienteering-formats/iof`, `orienteering-formats/purple-pen`), which give
-  courses in the exchange section's form. App logic and UI stay in the apps.
+  courses in the exchange section's form, with the IOF XML writer and start list reader
+  beside them. App logic and UI stay in the apps.
 - Follow the change rules in README.md:
   - old files must stay readable,
   - versions follow semver,

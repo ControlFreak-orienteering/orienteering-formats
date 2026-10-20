@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.9.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.10.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
@@ -58,7 +58,10 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
 - **`.cfpack`**: the same JSON as a header, followed by the map file, in one binary
   file. The byte layout is documented in `src/cfpack.ts`.
 - **IOF XML CourseData and Purple Pen** course files, read into the same form as the
-  exchange section; see "Course files from other programs".
+  exchange section, and IOF XML CourseData written from it; see "Course files from
+  other programs".
+- **IOF XML StartList** files (Eventor, timing programs), read into the start list
+  form of the QR film; see "Course files from other programs".
 - **Errors** are a `FormatError` with a `code`; each app turns the code into its own
   text.
 
@@ -186,15 +189,32 @@ Printed QR codes live for months, so the link format only ever grows:
 `orienteering-formats/iof` and `orienteering-formats/purple-pen` read the course files
 other programs write, and give the courses in the same form as the exchange section
 below (a `CourseSet`: a `CourseExchange` whose courses may also carry `family`,
-`classNames` and `partlyRead`), so an app reads every course file the same way.
+`classNames`, `partlyRead` and `tapedRoutes`), so an app reads every course file the
+same way. `orienteering-formats/iof` also writes that form as IOF XML, and reads start
+lists.
 
 - **IOF XML CourseData**, versions 3.0 and 2.0.3 (OCAD, Condes, Purple Pen,
-  ControlFreak): `readIofCourseData` gives the courses, `version` and `eventName`.
+  ControlFreak): `readIofCourseData` gives the courses, `version`, `eventName` and
+  `unpositioned` (ids of points the file gives no map position; they are at (0, 0)).
   A forked 3.0 course is written as one course per variation with a shared
-  `family`; score courses have `order: "free"` and `scores`. Positions are
-  millimetres on the printed map (`map.metersPerUnit` is the scale over 1000), with
-  `lat`/`lng` when the file has `<Position>`; 2.0.3 files have no positions on the
-  earth.
+  `family`; score courses have `order: "free"` and `scores`; marked routes
+  (`specialInstruction` TapedRoute / FunnelTapedRoute) are `tapedRoutes`. Positions
+  are millimetres on the printed map (`map.metersPerUnit` is the scale over 1000),
+  flipped to the exchange rule's y downwards in both versions, with `lat`/`lng` when
+  the file has `<Position>`; 2.0.3 files have no positions on the earth.
+- **Writing IOF XML 3.0 CourseData**: `writeIofCourseData(set, options)` writes a
+  `CourseSet` as the file timing systems read. Each control's `id` becomes the file's
+  `<Id>` (give controls their codes as ids), positions are converted to millimetres at
+  `map.scale` and flipped back to the map's y upwards, a forked course becomes one
+  course per variation in a `<CourseFamily>`, lengths are the set's or the straight
+  line at the scale, and `classNames` become `<ClassCourseAssignment>`. Options:
+  `eventName`, `creator`, `createTime`, `mapCorners`. A set written here reads back
+  the same.
+- **IOF XML StartList**, versions 3.0 and 2.0.3 (Eventor's `/api/starts/event` and
+  `/iofxml`): `readIofStartList` gives a `StartList` (the QR film's form, runners with
+  `time` "HH:MM:SS" as the file's wall clock, `name`, `club`, `class`, `card`, `start`)
+  with `version`; `looksLikeIofStartList` recognises the file. Runners without a start
+  time are left out, and relay teams are not read.
 - **Purple Pen** (.ppen): `readPurplePen` gives the courses, `title` and `mapFileName`.
   Purple Pen has no positions on the earth; an app that needs them reads the named
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
@@ -204,8 +224,9 @@ below (a `CourseSet`: a `CourseExchange` whose courses may also carry `family`,
   files are often ISO-8859-1), and `looksLikeIofCourseData` / `looksLikePurplePen`
   recognise a file by its content.
 - Errors are `FormatError`s: `unreadable` (broken XML), `wrong-format` (not that kind
-  of file) and `empty` (no courses). The readers use the browser's `DOMParser`; pass
-  `parseXml` (e.g. from `@xmldom/xmldom`) where there is none.
+  of file) and `empty` (no courses, no runners, or nothing to write). The readers use
+  the browser's `DOMParser`; pass `parseXml` (e.g. from `@xmldom/xmldom`) where there
+  is none.
 
 ```ts
 import { decodeXmlBytes } from "orienteering-formats";

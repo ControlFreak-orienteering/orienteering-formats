@@ -18,10 +18,12 @@
  *
  * Only what the apps use is read. Unknown elements are ignored.
  *
- * Positions: `<MapPosition>` is millimetres on the printed map. The 3.0 values are
- * given as the file has them, while 2.0.3 exports (e.g. OCAD) count y upwards and are
- * flipped to the exchange section's y-down rule. `<Position>` (3.0 only) gives
- * `lat`/`lng`, which a program writes only when its map is georeferenced.
+ * Positions: `<MapPosition>` is millimetres on the printed map, counted with y upwards
+ * as the map's own grid does (so OCAD, Purple Pen and ControlFreak write it), and flipped
+ * here to the exchange section's y-down rule in both versions. `<Position>` (3.0 only)
+ * gives `lat`/`lng`, which a program writes only when its map is georeferenced. A point
+ * without a `<MapPosition>` is kept at (0, 0) and listed in `unpositioned`, so the
+ * courses keep their order and an app can say what is missing.
  */
 import type { CourseSet } from "../courses.js";
 import { type XmlParse } from "../xml.js";
@@ -33,6 +35,11 @@ export type IofCourseData = CourseSet & {
     version: IofVersion;
     /** The event's name, or "" when the file has none. */
     eventName: string;
+    /**
+     * Ids of the points the file gives no position on the map for (they are at (0, 0) in
+     * `controls`). A file from a results system often has codes but no positions.
+     */
+    unpositioned: string[];
 };
 /** Options for `readIofCourseData`. */
 export type ReadIofOptions = {

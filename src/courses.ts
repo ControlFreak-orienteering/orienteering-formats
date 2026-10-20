@@ -14,6 +14,17 @@
 
 import type { CourseExchange, ExchangeCourse } from "./exchange.js";
 
+/**
+ * A marked route (snitsel) on a leg of a course: IOF XML 3.0 writes it as a
+ * `specialInstruction` on the control the leg leads to.
+ */
+export type CourseSetTapedRoute = {
+  /** Index in the course's `controls` of the point the leg leads to. */
+  to: number;
+  /** `all` when the whole leg is taped, `funnel` when only a funnel at its end is. */
+  kind: "all" | "funnel";
+};
+
 /** A course from a course file: an exchange course with the file's extra facts. */
 export type CourseSetCourse = ExchangeCourse & {
   /**
@@ -28,6 +39,8 @@ export type CourseSetCourse = ExchangeCourse & {
    * read (Purple Pen), so the app can tell the user.
    */
   partlyRead?: boolean;
+  /** Legs with a marked route, when the file says so (IOF XML 3.0). */
+  tapedRoutes?: CourseSetTapedRoute[];
 };
 
 /** Everything read from a course file. Usable wherever a `CourseExchange` is. */

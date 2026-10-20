@@ -99,7 +99,7 @@ describe("readIofCourseData, IOF XML 3.0", () => {
     const start = set.controls.find((c) => c.id === "S1");
     expect(start).toMatchObject({ kind: "start", codes: [], label: "S1", lat: 59.4, lng: 18 });
     expect(set.controls.find((c) => c.id === "X1")?.kind).toBe("crossing");
-    expect(set.controls.find((c) => c.id === "31")).toMatchObject({ kind: "control", x: 30, y: 40 });
+    expect(set.controls.find((c) => c.id === "31")).toMatchObject({ kind: "control", x: 30, y: -40 });
   });
 
   it("uses punching unit ids as codes, falling back to a numeric id", () => {
@@ -129,6 +129,28 @@ describe("readIofCourseData, IOF XML 3.0", () => {
       y: 0,
     });
   });
+
+  it("lists the points the file gives no position on the map for", () => {
+    // 32 has punching units but no MapPosition; X1 and F1 have nothing; 99 is undefined.
+    expect(set.unpositioned).toEqual(["32", "X1", "F1", "99"]);
+  });
+
+  it("reads marked routes from the special instructions", () => {
+    const taped = read(
+      IOF_30.replace(
+        '<CourseControl type="Control"><Control>31</Control></CourseControl>\n      <CourseControl type="CrossingPoint">',
+        '<CourseControl type="Control" specialInstruction="TapedRoute"><Control>31</Control></CourseControl>\n      <CourseControl type="CrossingPoint" specialInstruction="MandatoryCrossingPoint">',
+      ).replace(
+        '<CourseControl type="Finish"><Control>F1</Control></CourseControl>\n    </Course>\n    <Course>\n      <Name>Poäng</Name>',
+        '<CourseControl type="Finish" specialInstruction="FunnelTapedRoute"><Control>F1</Control></CourseControl>\n    </Course>\n    <Course>\n      <Name>Poäng</Name>',
+      ),
+    );
+    expect(taped.courses[0]!.tapedRoutes).toEqual([
+      { to: 1, kind: "all" },
+      { to: 4, kind: "funnel" },
+    ]);
+    expect(taped.courses[1]!.tapedRoutes).toBeUndefined();
+  });
 });
 
 describe("readIofCourseData, a real-shaped 3.0 file with forks and positions", () => {
@@ -140,7 +162,7 @@ describe("readIofCourseData, a real-shaped 3.0 file with forks and positions", (
       lat: 61.302086,
       lng: 17.0741101,
       x: 10,
-      y: 20,
+      y: -20,
     });
     expect(set.controls.find((c) => c.id === "CROSS1")?.kind).toBe("crossing");
     expect(set.courses[0]).toMatchObject({
@@ -196,9 +218,13 @@ describe("readIofCourseData, IOF XML 2.0.3", () => {
     expect(isForkedCourse(set, set.courses[0]!)).toBe(true);
   });
 
-  it("flips y, since 2.0.3 exports count it upwards", () => {
+  it("flips y, since the map counts it upwards", () => {
     expect(set.controls.find((c) => c.id === "start:S1")).toMatchObject({ label: "S1", y: -10 });
     expect(set.controls.find((c) => c.id === "control:40")?.codes).toEqual([40]);
+  });
+
+  it("lists the points without a position", () => {
+    expect(set.unpositioned).toEqual(["control:46", "finish:M1"]);
   });
 });
 
