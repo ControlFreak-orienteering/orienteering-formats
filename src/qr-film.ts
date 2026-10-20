@@ -19,8 +19,8 @@
  *
  * Pure apart from compression, which uses the browser's (and Node's) `CompressionStream`.
  *
- * Moved here from CompetitionFreak (2026-10-17), since CompetitionFreak and the start
- * clock (startklocka) both use it: CompetitionFreak sends competitions and start lists,
+ * Moved here from ControlFreak Event (2026-10-17), since ControlFreak Event and the start
+ * clock (startklocka) both use it: ControlFreak Event sends competitions and start lists,
  * the start clock reads start lists. The frame format is unchanged, so films made
  * before still read.
  */

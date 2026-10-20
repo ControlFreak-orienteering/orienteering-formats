@@ -3,9 +3,9 @@
 File formats shared by orienteering apps:
 
 - **ControlFreak** (course setting) writes `.cfpack` and `.cfproj` files.
-- **CompetitionFreak** (competition administration) reads them, and sends competitions and
+- **ControlFreak Event** (competition administration) reads them, and sends competitions and
   start lists as QR films.
-- **The start clock** (startklocka) reads start lists from CompetitionFreak's QR films.
+- **The start clock** (startklocka) reads start lists from ControlFreak Event's QR films.
 - **The runner app** (run.controlfreak.se) reads courses from the QR links ControlFreak
   prints for virtual controls.
 
@@ -20,7 +20,7 @@ Depend on a tagged version, never on a branch:
 "orienteering-formats": "github:HenrikF/orienteering-formats#v0.9.0"
 ```
 
-Reading a pack or project file (e.g. in CompetitionFreak):
+Reading a pack or project file (e.g. in ControlFreak Event):
 
 ```ts
 import { FormatError, looksLikeCfpack, readCfpack, readProjectFile } from "orienteering-formats";
@@ -81,15 +81,15 @@ Both files hold the same JSON object (the *envelope*):
 
 - **QR film** (`encodeFrames`, `FrameCollector`): a text is compressed and cut into QR codes
   (`CFQ1|<id>|<index>|<count>|<data>`), shown in a loop on the sending screen and collected
-  in any order by the receiver. Moved here from CompetitionFreak; the frames are unchanged.
+  in any order by the receiver. Moved here from ControlFreak Event; the frames are unchanged.
 - **Start list** (`writeStartList`, `readStartList`), format `cf-startlist`: who starts when,
   for the start clock. Each runner has `time` ("HH:MM:SS") and `name`, and optionally
   `club`, `class`, `card`, `start`, `course` and `late`. Later versions only add fields, and
   the reader ignores what it does not know, so a start clock keeps reading lists from newer
-  versions of CompetitionFreak.
+  versions of ControlFreak Event.
 - **Clock code** (`writeClockCode`, `readClockCode`, `ClockSampler`): a QR code with the
   sender's time (`CFT1|<milliseconds since 1970>`), redrawn several times a second, so that
-  the start clock can set itself to CompetitionFreak's clock. `ClockSampler` keeps the code
+  the start clock can set itself to ControlFreak Event's clock. `ClockSampler` keeps the code
   that arrived with the least delay; its `offsetMs` is what to add to the receiver's clock.
 
 ```ts
