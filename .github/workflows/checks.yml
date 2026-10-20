@@ -1,0 +1,33 @@
+# This package's own checks: build, the tests (the format tests run on dist/), and that
+# the committed dist/ matches the source, since the apps install the package from a tag
+# without building.
+
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: dist/ is committed and up to date
+        run: git diff --exit-code -- dist
