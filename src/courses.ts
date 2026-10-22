@@ -62,6 +62,13 @@ export type CourseSetTeamMemberCourse = {
   courseName: string;
   /** The family of the course (see `CourseSetCourse.family`), when the file gives one. */
   courseFamily?: string;
+  /**
+   * Set by `joinCourseFamilies`: the id of the course in the joined set, absent when no
+   * course has `courseName`.
+   */
+  courseId?: string;
+  /** Set by `joinCourseFamilies`: the variation's code when that course is forked. */
+  variationCode?: string;
 };
 
 /**
