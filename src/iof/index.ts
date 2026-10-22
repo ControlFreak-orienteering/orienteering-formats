@@ -18,6 +18,8 @@ export {
   type CourseSet,
   type CourseSetCourse,
   type CourseSetTapedRoute,
+  type CourseSetTeamCourses,
+  type CourseSetTeamMemberCourse,
 } from "../courses.js";
 export type { StartList, StartListRunner } from "../start-list.js";
 export { FormatError, type FormatErrorCode } from "../errors.js";

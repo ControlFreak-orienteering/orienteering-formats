@@ -25,6 +25,9 @@
  *   known. Scores go into `<Score>`; marked routes and crossing points become the
  *   `specialInstruction` of the control the leg leads to.
  * - Class assignments (`classNames`) are written as `<ClassCourseAssignment>`.
+ * - The relay teams' courses (`teamCourses`) are written as `<TeamCourseAssignment>`,
+ *   one `<TeamMemberCourseAssignment>` per runner. Name the courses as they are written:
+ *   a variation of a forked course is "`<course> <code>`" in the family "`<course>`".
  *
  * A course without points is left out; a set with nothing to write is refused.
  */

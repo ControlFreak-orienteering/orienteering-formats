@@ -9,7 +9,8 @@
  *   holding `<Control>` points, `<Course>` elements with `<CourseControl>` references,
  *   and `<ClassCourseAssignment>`. A forked course is written as one `<Course>` per
  *   variation, sharing a `<CourseFamily>`. Score courses carry `<Score>` on their
- *   controls, or `randomOrder="true"`.
+ *   controls, or `randomOrder="true"`. `<TeamCourseAssignment>` says which course each
+ *   runner of a relay team runs (the teams' forking keys); see `teamCourses`.
  *   Schema: https://github.com/international-orienteering-federation/datastandard-v3
  * - **2.0.3** (older, still exported by many programs): `<StartPoint>`, `<Control>` and
  *   `<FinishPoint>` with codes, and `<Course>` elements holding one or more

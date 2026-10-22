@@ -39,9 +39,45 @@ export type CourseSetCourse = ExchangeCourse & {
     /** Legs with a marked route, when the file says so (IOF XML 3.0). */
     tapedRoutes?: CourseSetTapedRoute[];
 };
+/**
+ * The course one runner of a relay team runs, from IOF XML 3.0's
+ * `<TeamMemberCourseAssignment>`. Course-setting programs (OCAD, Condes, MeOS) write one
+ * per leg when they spread the variations of forked courses over the teams (the teams'
+ * forking keys), so the timing system knows which map each runner gets.
+ */
+export type CourseSetTeamMemberCourse = {
+    /** The leg, from 1. Missing when the file names the runner instead. */
+    leg?: number;
+    /** Which of several runners side by side on the same leg, from 1. */
+    legOrder?: number;
+    /** The runner's bib, when the file gives one. */
+    bib?: string;
+    /** The runner's name, when the file gives one. */
+    memberName?: string;
+    /** The course's name: for a forked course, the name of one variation's `<Course>`. */
+    courseName: string;
+    /** The family of the course (see `CourseSetCourse.family`), when the file gives one. */
+    courseFamily?: string;
+};
+/**
+ * The courses of one relay team, from IOF XML 3.0's `<TeamCourseAssignment>`. A file
+ * names the team by bib, by name and class, or both.
+ */
+export type CourseSetTeamCourses = {
+    /** The team's bib (start number), when the file gives one. */
+    bib?: string;
+    /** The team's name, when the file gives one. */
+    teamName?: string;
+    /** The team's class, when the file gives one. */
+    className?: string;
+    /** The course of each runner, in the file's order. */
+    members: CourseSetTeamMemberCourse[];
+};
 /** Everything read from a course file. Usable wherever a `CourseExchange` is. */
 export type CourseSet = Omit<CourseExchange, "courses"> & {
     courses: CourseSetCourse[];
+    /** Which course each relay team's runners run, when the file says (IOF XML 3.0). */
+    teamCourses?: CourseSetTeamCourses[];
 };
 /**
  * Whether a course is forked, in any of the ways a file can say it: variations listed,

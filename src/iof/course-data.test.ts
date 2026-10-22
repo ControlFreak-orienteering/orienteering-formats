@@ -228,6 +228,51 @@ describe("readIofCourseData, IOF XML 2.0.3", () => {
   });
 });
 
+describe("IOF XML 3.0 team course assignments", () => {
+  // As course-setting programs write a relay's forking: one course per variation in a
+  // family, and per team the variation each leg's runner runs.
+  const xml = `<CourseData iofVersion="3.0"><RaceCourseData>
+    <Control><Id>S1</Id></Control><Control><Id>31</Id></Control><Control><Id>F1</Id></Control>
+    <Course><Name>Stafett A</Name><CourseFamily>Stafett</CourseFamily>
+      <CourseControl type="Start"><Control>S1</Control></CourseControl>
+      <CourseControl type="Finish"><Control>F1</Control></CourseControl></Course>
+    <TeamCourseAssignment>
+      <BibNumber>1</BibNumber><TeamName>OK Ravinen 1</TeamName><ClassName>H21</ClassName>
+      <TeamMemberCourseAssignment>
+        <BibNumber>1-1</BibNumber><Leg>1</Leg><TeamMemberName>Anna Berg</TeamMemberName>
+        <CourseName>Stafett A</CourseName><CourseFamily>Stafett</CourseFamily>
+      </TeamMemberCourseAssignment>
+      <TeamMemberCourseAssignment><Leg>2</Leg><LegOrder>2</LegOrder><CourseName>Stafett B</CourseName></TeamMemberCourseAssignment>
+      <TeamMemberCourseAssignment><Leg>3</Leg></TeamMemberCourseAssignment>
+    </TeamCourseAssignment>
+    <TeamCourseAssignment><TeamName>Tomma laget</TeamName></TeamCourseAssignment>
+  </RaceCourseData></CourseData>`;
+
+  it("reads each team's runners' courses by leg, and skips what names no course", () => {
+    expect(read(xml).teamCourses).toEqual([
+      {
+        bib: "1",
+        teamName: "OK Ravinen 1",
+        className: "H21",
+        members: [
+          {
+            leg: 1,
+            bib: "1-1",
+            memberName: "Anna Berg",
+            courseName: "Stafett A",
+            courseFamily: "Stafett",
+          },
+          { leg: 2, legOrder: 2, courseName: "Stafett B" },
+        ],
+      },
+    ]);
+  });
+
+  it("leaves teamCourses out of a file without any", () => {
+    expect(read(IOF_30).teamCourses).toBeUndefined();
+  });
+});
+
 describe("recognising and refusing files", () => {
   it("accepts CourseData with or without a namespace prefix, and rejects others", () => {
     expect(looksLikeIofCourseData(IOF_30)).toBe(true);
