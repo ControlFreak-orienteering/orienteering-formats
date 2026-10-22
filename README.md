@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.10.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.11.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
@@ -201,13 +201,19 @@ lists.
   (`specialInstruction` TapedRoute / FunnelTapedRoute) are `tapedRoutes`. Positions
   are millimetres on the printed map (`map.metersPerUnit` is the scale over 1000),
   flipped to the exchange rule's y downwards in both versions, with `lat`/`lng` when
-  the file has `<Position>`; 2.0.3 files have no positions on the earth.
+  the file has `<Position>`; 2.0.3 files have no positions on the earth. A 3.0 file's
+  `<TeamCourseAssignment>`s (a relay's forking: the course each team's runner runs
+  per leg, as OCAD, Condes and MeOS write it) are `teamCourses` on the set, each team
+  by `bib`, `teamName` and `className` with its `members`' `leg`, `legOrder`,
+  `courseName` and `courseFamily`.
 - **Writing IOF XML 3.0 CourseData**: `writeIofCourseData(set, options)` writes a
   `CourseSet` as the file timing systems read. Each control's `id` becomes the file's
   `<Id>` (give controls their codes as ids), positions are converted to millimetres at
   `map.scale` and flipped back to the map's y upwards, a forked course becomes one
   course per variation in a `<CourseFamily>`, lengths are the set's or the straight
-  line at the scale, and `classNames` become `<ClassCourseAssignment>`. Options:
+  line at the scale, `classNames` become `<ClassCourseAssignment>` and `teamCourses`
+  become `<TeamCourseAssignment>` (name a variation as written: "`<course> <code>`" in
+  the family "`<course>`"). Options:
   `eventName`, `creator`, `createTime`, `mapCorners`. A set written here reads back
   the same.
 - **IOF XML StartList**, versions 3.0 and 2.0.3 (Eventor's `/api/starts/event` and
@@ -220,6 +226,11 @@ lists.
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
   forked course is read along its first variation and marked `partlyRead`.
 - `isForkedCourse(set, course)` says whether a course is forked in any of these ways.
+- `joinCourseFamilies(set)` joins the courses of a 3.0 `family` into one forked course
+  with `variations` (named after the family, id `family:<family>`, each variation coded
+  by its course's name without the family's: "Stafett A" is "A"), the form ControlFreak
+  files and 2.0.3 have, and gives each `teamCourses` member its `courseId` and
+  `variationCode`.
 - `decodeXmlBytes` turns a file's bytes into text by the encoding it declares (older
   files are often ISO-8859-1), and `looksLikeIofCourseData` / `looksLikePurplePen`
   recognise a file by its content.

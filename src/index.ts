@@ -28,9 +28,12 @@ export {
 } from "./cfproj.js";
 export {
   isForkedCourse,
+  joinCourseFamilies,
   type CourseSet,
   type CourseSetCourse,
   type CourseSetTapedRoute,
+  type CourseSetTeamCourses,
+  type CourseSetTeamMemberCourse,
 } from "./courses.js";
 export { FormatError, type FormatErrorCode } from "./errors.js";
 export {

@@ -9,7 +9,8 @@
  *   holding `<Control>` points, `<Course>` elements with `<CourseControl>` references,
  *   and `<ClassCourseAssignment>`. A forked course is written as one `<Course>` per
  *   variation, sharing a `<CourseFamily>`. Score courses carry `<Score>` on their
- *   controls, or `randomOrder="true"`.
+ *   controls, or `randomOrder="true"`. `<TeamCourseAssignment>` says which course each
+ *   runner of a relay team runs (the teams' forking keys); see `teamCourses`.
  *   Schema: https://github.com/international-orienteering-federation/datastandard-v3
  * - **2.0.3** (older, still exported by many programs): `<StartPoint>`, `<Control>` and
  *   `<FinishPoint>` with codes, and `<Course>` elements holding one or more
@@ -194,12 +195,61 @@ function readVersion3(root) {
             ...(tapedRoutes.length > 0 ? { tapedRoutes } : {}),
         };
     });
+    const teamCourses = readTeamCourses(race);
     return {
         ...mapFacts(childText(childElement(race, "Map"), "Scale")),
         controls,
         courses,
         unpositioned,
+        ...(teamCourses.length > 0 ? { teamCourses } : {}),
     };
+}
+/** A whole number of at least 1 from an element's text, or undefined. */
+function ordinalOf(text) {
+    const n = numberOf(text);
+    return n !== undefined && Number.isInteger(n) && n >= 1 ? n : undefined;
+}
+/**
+ * The `<TeamCourseAssignment>`s of a race: which course each runner of a relay team
+ * runs. A runner's assignment without a course name says nothing and is skipped, and so
+ * is a team that names no runner's course.
+ */
+function readTeamCourses(race) {
+    return childElements(race, "TeamCourseAssignment").flatMap((element) => {
+        const members = childElements(element, "TeamMemberCourseAssignment").flatMap((member) => {
+            const courseName = childText(member, "CourseName");
+            if (!courseName)
+                return [];
+            const leg = ordinalOf(childText(member, "Leg"));
+            const legOrder = ordinalOf(childText(member, "LegOrder"));
+            const bib = childText(member, "BibNumber");
+            const memberName = childText(member, "TeamMemberName");
+            const courseFamily = childText(member, "CourseFamily");
+            return [
+                {
+                    ...(leg !== undefined ? { leg } : {}),
+                    ...(legOrder !== undefined ? { legOrder } : {}),
+                    ...(bib ? { bib } : {}),
+                    ...(memberName ? { memberName } : {}),
+                    courseName,
+                    ...(courseFamily ? { courseFamily } : {}),
+                },
+            ];
+        });
+        if (members.length === 0)
+            return [];
+        const bib = childText(element, "BibNumber");
+        const teamName = childText(element, "TeamName");
+        const className = childText(element, "ClassName");
+        return [
+            {
+                ...(bib ? { bib } : {}),
+                ...(teamName ? { teamName } : {}),
+                ...(className ? { className } : {}),
+                members,
+            },
+        ];
+    });
 }
 // -------------------------------------------------------------- IOF XML 2.0.3
 function readVersion2(root) {

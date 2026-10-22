@@ -25,6 +25,9 @@
  *   known. Scores go into `<Score>`; marked routes and crossing points become the
  *   `specialInstruction` of the control the leg leads to.
  * - Class assignments (`classNames`) are written as `<ClassCourseAssignment>`.
+ * - The relay teams' courses (`teamCourses`) are written as `<TeamCourseAssignment>`,
+ *   one `<TeamMemberCourseAssignment>` per runner. Name the courses as they are written:
+ *   a variation of a forked course is "`<course> <code>`" in the family "`<course>`".
  *
  * A course without points is left out; a set with nothing to write is refused.
  */
@@ -186,6 +189,26 @@ export function writeIofCourseData(set, options = {}) {
             text(3, "CourseName", course.name);
             lines.push(`${pad(2)}</ClassCourseAssignment>`);
         }
+    }
+    // The schema's order: the team, then each runner's leg, name and course.
+    for (const team of set.teamCourses ?? []) {
+        if (team.members.length === 0)
+            continue;
+        lines.push(`${pad(2)}<TeamCourseAssignment>`);
+        text(3, "BibNumber", team.bib);
+        text(3, "TeamName", team.teamName);
+        text(3, "ClassName", team.className);
+        for (const member of team.members) {
+            lines.push(`${pad(3)}<TeamMemberCourseAssignment>`);
+            text(4, "BibNumber", member.bib);
+            text(4, "Leg", member.leg);
+            text(4, "LegOrder", member.legOrder);
+            text(4, "TeamMemberName", member.memberName);
+            text(4, "CourseName", member.courseName);
+            text(4, "CourseFamily", member.courseFamily);
+            lines.push(`${pad(3)}</TeamMemberCourseAssignment>`);
+        }
+        lines.push(`${pad(2)}</TeamCourseAssignment>`);
     }
     lines.push(`${pad(1)}</RaceCourseData>`);
     lines.push("</CourseData>");

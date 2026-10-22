@@ -1,6 +1,6 @@
 {
   "name": "orienteering-formats",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Shared file formats for the ControlFreak family (.cfpack, .cfproj), readers for IOF XML CourseData and Purple Pen course files, the QR course link for virtual controls, and a reader that draws OCAD and OpenOrienteering Mapper maps as SVG.",
   "license": "MIT",
   "author": "Henrik Flordal",

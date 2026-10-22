@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CourseSet } from "../courses.js";
+import { joinCourseFamilies, type CourseSet } from "../courses.js";
 import { FormatError } from "../errors.js";
 import { parseXml } from "../test-xml.js";
 import { readIofCourseData } from "./course-data.js";
@@ -141,6 +141,39 @@ describe("writeIofCourseData", () => {
     // Without a scale the units are millimetres, but lengths cannot be computed.
     expect(out).not.toContain("<Scale>");
     expect(out).not.toContain("<LegLength>");
+    // Joined again, the family is the forked course it was written from.
+    const joined = joinCourseFamilies(read(out));
+    expect(joined.courses.map((c) => c.name)).toEqual(["Gafflad"]);
+    expect(joined.courses[0]!.variations?.map((v) => [v.code, v.controls])).toEqual([
+      ["A", ["S1", "31", "M1"]],
+      ["B", ["S1", "32", "M1"]],
+    ]);
+  });
+
+  it("writes the teams' courses in the schema's order and reads them back", () => {
+    const teamCourses: CourseSet["teamCourses"] = [
+      {
+        bib: "1",
+        teamName: "OK Ravinen & co",
+        className: "H21",
+        members: [
+          { leg: 1, memberName: "Anna Berg", courseName: "Lång A", courseFamily: "Lång" },
+          { leg: 2, legOrder: 2, bib: "1-2", courseName: "Lång B", courseFamily: "Lång" },
+        ],
+      },
+      { teamName: "Utan löpare", members: [] },
+    ];
+    const out = writeIofCourseData({ ...SET, teamCourses });
+    expect(countOf(out, "TeamCourseAssignment>")).toBe(1);
+    expect(out).toContain("<TeamName>OK Ravinen &amp; co</TeamName>");
+    expect(out).toContain(
+      "<BibNumber>1-2</BibNumber>\n        <Leg>2</Leg>\n        <LegOrder>2</LegOrder>\n        <CourseName>Lång B</CourseName>\n        <CourseFamily>Lång</CourseFamily>",
+    );
+    // After the class assignments, as the schema wants.
+    expect(out.indexOf("<TeamCourseAssignment>")).toBeGreaterThan(
+      out.lastIndexOf("</ClassCourseAssignment>"),
+    );
+    expect(read(out).teamCourses).toEqual([teamCourses[0]]);
   });
 
   it("refuses a set with nothing to write", () => {
