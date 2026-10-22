@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CourseSet } from "../courses.js";
+import { joinCourseFamilies, type CourseSet } from "../courses.js";
 import { FormatError } from "../errors.js";
 import { parseXml } from "../test-xml.js";
 import { readIofCourseData } from "./course-data.js";
@@ -141,6 +141,13 @@ describe("writeIofCourseData", () => {
     // Without a scale the units are millimetres, but lengths cannot be computed.
     expect(out).not.toContain("<Scale>");
     expect(out).not.toContain("<LegLength>");
+    // Joined again, the family is the forked course it was written from.
+    const joined = joinCourseFamilies(read(out));
+    expect(joined.courses.map((c) => c.name)).toEqual(["Gafflad"]);
+    expect(joined.courses[0]!.variations?.map((v) => [v.code, v.controls])).toEqual([
+      ["A", ["S1", "31", "M1"]],
+      ["B", ["S1", "32", "M1"]],
+    ]);
   });
 
   it("writes the teams' courses in the schema's order and reads them back", () => {

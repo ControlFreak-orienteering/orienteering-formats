@@ -28,6 +28,7 @@ export {
 } from "./cfproj.js";
 export {
   isForkedCourse,
+  joinCourseFamilies,
   type CourseSet,
   type CourseSetCourse,
   type CourseSetTapedRoute,

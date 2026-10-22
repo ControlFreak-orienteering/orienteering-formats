@@ -7,7 +7,7 @@
 export { looksLikeIofCourseData, readIofCourseData, type IofCourseData, type IofVersion, type ReadIofOptions, } from "./course-data.js";
 export { writeIofCourseData, type WriteIofOptions } from "./write-course-data.js";
 export { looksLikeIofStartList, readIofStartList, type IofStartList } from "./start-list.js";
-export { isForkedCourse, type CourseSet, type CourseSetCourse, type CourseSetTapedRoute, type CourseSetTeamCourses, type CourseSetTeamMemberCourse, } from "../courses.js";
+export { isForkedCourse, joinCourseFamilies, type CourseSet, type CourseSetCourse, type CourseSetTapedRoute, type CourseSetTeamCourses, type CourseSetTeamMemberCourse, } from "../courses.js";
 export type { StartList, StartListRunner } from "../start-list.js";
 export { FormatError, type FormatErrorCode } from "../errors.js";
 export { decodeXmlBytes, type XmlParse } from "../xml.js";

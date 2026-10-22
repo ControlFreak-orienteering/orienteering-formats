@@ -7,6 +7,6 @@
 export { looksLikeIofCourseData, readIofCourseData, } from "./course-data.js";
 export { writeIofCourseData } from "./write-course-data.js";
 export { looksLikeIofStartList, readIofStartList } from "./start-list.js";
-export { isForkedCourse, } from "../courses.js";
+export { isForkedCourse, joinCourseFamilies, } from "../courses.js";
 export { FormatError } from "../errors.js";
 export { decodeXmlBytes } from "../xml.js";

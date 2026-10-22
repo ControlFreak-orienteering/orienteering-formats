@@ -15,6 +15,7 @@ export { writeIofCourseData, type WriteIofOptions } from "./write-course-data.js
 export { looksLikeIofStartList, readIofStartList, type IofStartList } from "./start-list.js";
 export {
   isForkedCourse,
+  joinCourseFamilies,
   type CourseSet,
   type CourseSetCourse,
   type CourseSetTapedRoute,

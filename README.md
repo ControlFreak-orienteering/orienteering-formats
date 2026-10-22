@@ -226,6 +226,11 @@ lists.
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
   forked course is read along its first variation and marked `partlyRead`.
 - `isForkedCourse(set, course)` says whether a course is forked in any of these ways.
+- `joinCourseFamilies(set)` joins the courses of a 3.0 `family` into one forked course
+  with `variations` (named after the family, id `family:<family>`, each variation coded
+  by its course's name without the family's: "Stafett A" is "A"), the form ControlFreak
+  files and 2.0.3 have, and gives each `teamCourses` member its `courseId` and
+  `variationCode`.
 - `decodeXmlBytes` turns a file's bytes into text by the encoding it declares (older
   files are often ISO-8859-1), and `looksLikeIofCourseData` / `looksLikePurplePen`
   recognise a file by its content.
