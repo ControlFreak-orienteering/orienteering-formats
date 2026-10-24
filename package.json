@@ -6,7 +6,7 @@
   "author": "Henrik Flordal",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HenrikF/orienteering-formats.git"
+    "url": "git+https://github.com/ControlFreak-orienteering/orienteering-formats.git"
   },
   "type": "module",
   "sideEffects": false,

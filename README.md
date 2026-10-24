@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.12.0"
+"orienteering-formats": "github:ControlFreak-orienteering/orienteering-formats#v0.12.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
