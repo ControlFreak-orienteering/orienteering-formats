@@ -29,7 +29,7 @@ import {
  * a map coordinate is a screen coordinate. Nothing here negates Y — doing
  * so is exactly what turns the map upside down.
  */
-type Pt = {
+export type Pt = {
   x: number;
   y: number;
   /** This vertex starts a cubic Bezier; the next two are its control points. */
@@ -40,7 +40,8 @@ type Pt = {
   holePoint: boolean;
 };
 
-type OmapColor = {
+export type OmapColor = {
+  name: string;
   rgb: string;
   opacity: number;
   /** Paint order; 0 is the frontmost color. See `Renderer.markup`. */
@@ -143,7 +144,7 @@ export function findByTag(root: Element | Document, name: string): Element[] {
   return found;
 }
 
-function num(el: Element | null, attr: string, fallback = 0): number {
+export function num(el: Element | null, attr: string, fallback = 0): number {
   const raw = el?.getAttribute(attr);
   if (raw === null || raw === undefined) return fallback;
   const n = Number(raw);
@@ -184,13 +185,13 @@ function colorRgb(el: Element): string {
  * the format does not use. Reading the wrong attribute leaves every
  * lookup empty, and the whole map comes out unpainted.
  */
-function parseColors(doc: Document): Map<number, OmapColor> {
+export function parseColors(doc: Document): Map<number, OmapColor> {
   const colors = new Map<number, OmapColor>();
   const table = findByTag(doc, "colors").flatMap((el) => childrenByTag(el, "color"));
   table.forEach((el, index) => {
     const declared = num(el, "priority", Number.NaN);
     const order = Number.isFinite(declared) ? declared : index;
-    colors.set(order, { rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
+    colors.set(order, { name: el.getAttribute("name") ?? "", rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
   });
   return colors;
 }
@@ -790,7 +791,7 @@ function parseProjection(crs: Element): TransverseMercator | null {
  * overridden the scale, and then that is the scale the map is being worked
  * in, so it has to be the one the offsets are measured with too.
  */
-function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGeoreference | null {
+export function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGeoreference | null {
   const geo = findByTag(doc, "georeferencing")[0];
   if (!geo) return null;
   const projectedCrs = childByTag(geo, "projected_crs");
@@ -826,6 +827,18 @@ function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGeorefere
 /* Entry point                                                           */
 /* -------------------------------------------------------------------- */
 
+/**
+ * The map's scale denominator, with a fallback of 1:15000 when the file gives
+ * none or a nonsensical one (`scaleFromFile` is then false).
+ */
+export function parseScale(doc: Document): { scale: number; scaleFromFile: boolean } {
+  const map = findByTag(doc, "map")[0] ?? doc.documentElement;
+  const rawScale = num(findByTag(doc, "georeferencing")[0] ?? map, "scale", 15000);
+  // Guard against missing or nonsensical scale values in the file.
+  const scaleFromFile = rawScale >= 500 && rawScale <= 200000;
+  return { scale: scaleFromFile ? rawScale : 15000, scaleFromFile };
+}
+
 export type OmapRender = {
   /** Inner SVG markup, without the enclosing `<svg>` tag. */
   innerMarkup: string;
@@ -850,11 +863,7 @@ export function renderOmap(doc: Document): OmapRender {
     .flatMap((el) => childrenByTag(el, "symbol"))
     .map(parseSymbol);
 
-  const map = findByTag(doc, "map")[0] ?? doc.documentElement;
-  const rawScale = num(findByTag(doc, "georeferencing")[0] ?? map, "scale", 15000);
-  // Guard against missing or nonsensical scale values in the file.
-  const scaleFromFile = rawScale >= 500 && rawScale <= 200000;
-  const scale = scaleFromFile ? rawScale : 15000;
+  const { scale, scaleFromFile } = parseScale(doc);
   // OpenOrienteering Mapper coordinates are in 1/1000 mm on the printed map.
   const metersPerUnit = scale / 1_000_000;
 

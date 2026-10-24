@@ -61,4 +61,13 @@ export type {
   UnsupportedSymbol,
 } from "./ocad/types.js";
 export { renderOmap, type OmapRender } from "./omap.js";
+export {
+  parseOmapModel,
+  type OmapModel,
+  type OmapModelColor,
+  type OmapModelObject,
+  type OmapModelPoint,
+  type OmapModelSymbol,
+  type OmapModelSymbolKind,
+} from "./omap-model.js";
 export { cropOmapDoc, cropOmapXml, type OmapRect } from "./omap-crop.js";

@@ -59,7 +59,7 @@ export function findByTag(root, name) {
     walk(root);
     return found;
 }
-function num(el, attr, fallback = 0) {
+export function num(el, attr, fallback = 0) {
     const raw = el?.getAttribute(attr);
     if (raw === null || raw === undefined)
         return fallback;
@@ -99,13 +99,13 @@ function colorRgb(el) {
  * the format does not use. Reading the wrong attribute leaves every
  * lookup empty, and the whole map comes out unpainted.
  */
-function parseColors(doc) {
+export function parseColors(doc) {
     const colors = new Map();
     const table = findByTag(doc, "colors").flatMap((el) => childrenByTag(el, "color"));
     table.forEach((el, index) => {
         const declared = num(el, "priority", Number.NaN);
         const order = Number.isFinite(declared) ? declared : index;
-        colors.set(order, { rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
+        colors.set(order, { name: el.getAttribute("name") ?? "", rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
     });
     return colors;
 }
@@ -655,7 +655,7 @@ function parseProjection(crs) {
  * overridden the scale, and then that is the scale the map is being worked
  * in, so it has to be the one the offsets are measured with too.
  */
-function parseGeoreferencing(doc, metersPerUnit) {
+export function parseGeoreferencing(doc, metersPerUnit) {
     const geo = findByTag(doc, "georeferencing")[0];
     if (!geo)
         return null;
@@ -686,6 +686,20 @@ function parseGeoreferencing(doc, metersPerUnit) {
         projection,
     };
 }
+/* -------------------------------------------------------------------- */
+/* Entry point                                                           */
+/* -------------------------------------------------------------------- */
+/**
+ * The map's scale denominator, with a fallback of 1:15000 when the file gives
+ * none or a nonsensical one (`scaleFromFile` is then false).
+ */
+export function parseScale(doc) {
+    const map = findByTag(doc, "map")[0] ?? doc.documentElement;
+    const rawScale = num(findByTag(doc, "georeferencing")[0] ?? map, "scale", 15000);
+    // Guard against missing or nonsensical scale values in the file.
+    const scaleFromFile = rawScale >= 500 && rawScale <= 200000;
+    return { scale: scaleFromFile ? rawScale : 15000, scaleFromFile };
+}
 /**
  * Renders an already-parsed map document to an SVG fragment. Kept apart
  * from `omapToSvg` so it can be exercised without a DOM — it only ever
@@ -697,11 +711,7 @@ export function renderOmap(doc) {
     const symbols = findByTag(doc, "symbols")
         .flatMap((el) => childrenByTag(el, "symbol"))
         .map(parseSymbol);
-    const map = findByTag(doc, "map")[0] ?? doc.documentElement;
-    const rawScale = num(findByTag(doc, "georeferencing")[0] ?? map, "scale", 15000);
-    // Guard against missing or nonsensical scale values in the file.
-    const scaleFromFile = rawScale >= 500 && rawScale <= 200000;
-    const scale = scaleFromFile ? rawScale : 15000;
+    const { scale, scaleFromFile } = parseScale(doc);
     // OpenOrienteering Mapper coordinates are in 1/1000 mm on the printed map.
     const metersPerUnit = scale / 1_000_000;
     const renderer = new Renderer(colors, symbols);

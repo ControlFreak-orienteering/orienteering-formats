@@ -19,7 +19,7 @@ import { type MapGeoreference } from "./georeference.js";
  * a map coordinate is a screen coordinate. Nothing here negates Y — doing
  * so is exactly what turns the map upside down.
  */
-type Pt = {
+export type Pt = {
     x: number;
     y: number;
     /** This vertex starts a cubic Bezier; the next two are its control points. */
@@ -28,6 +28,13 @@ type Pt = {
     closePoint: boolean;
     /** This vertex ends its sub-path; the next one starts a new one (an area's hole). */
     holePoint: boolean;
+};
+export type OmapColor = {
+    name: string;
+    rgb: string;
+    opacity: number;
+    /** Paint order; 0 is the frontmost color. See `Renderer.markup`. */
+    order: number;
 };
 /**
  * Direct children with the given tag name. A subtree search would be
@@ -50,8 +57,33 @@ export declare function childByTag(el: Element, name: string): Element | null;
  * `<map>` at a fixed depth. Matches are not descended into.
  */
 export declare function findByTag(root: Element | Document, name: string): Element[];
+export declare function num(el: Element | null, attr: string, fallback?: number): number;
+/**
+ * The color table, keyed by the number symbols refer to it by.
+ *
+ * That number is the color's `priority` attribute — *not* `number`, which
+ * the format does not use. Reading the wrong attribute leaves every
+ * lookup empty, and the whole map comes out unpainted.
+ */
+export declare function parseColors(doc: Document): Map<number, OmapColor>;
 /** The points of a `<coords>` element: "x y flags;" for each point. */
 export declare function parseCoords(el: Element | null): Pt[];
+/**
+ * The map's georeferencing, or `null` when the file has none we can use.
+ *
+ * `metersPerUnit` is the caller's, not the file's: the user may have
+ * overridden the scale, and then that is the scale the map is being worked
+ * in, so it has to be the one the offsets are measured with too.
+ */
+export declare function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGeoreference | null;
+/**
+ * The map's scale denominator, with a fallback of 1:15000 when the file gives
+ * none or a nonsensical one (`scaleFromFile` is then false).
+ */
+export declare function parseScale(doc: Document): {
+    scale: number;
+    scaleFromFile: boolean;
+};
 export type OmapRender = {
     /** Inner SVG markup, without the enclosing `<svg>` tag. */
     innerMarkup: string;
@@ -69,4 +101,3 @@ export type OmapRender = {
  * reads the document it is given.
  */
 export declare function renderOmap(doc: Document): OmapRender;
-export {};

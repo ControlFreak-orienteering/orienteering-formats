@@ -17,4 +17,5 @@ export { parseOcadFile } from "./ocad/parser.js";
 export { escapeXml, renderMapSvg, type RenderedMap, type RenderOptions, } from "./ocad/render-svg.js";
 export type { AreaSymbol, GeoReference, LineDecorations, LineSymbol, MapObject, ObjectKind, OcadColor, OcadPoint, OcadSymbol, ParsedOcadMap, PointSymbol, PointSymbolElement, SymbolBase, SymbolKind, TextSymbol, UnsupportedSymbol, } from "./ocad/types.js";
 export { renderOmap, type OmapRender } from "./omap.js";
+export { parseOmapModel, type OmapModel, type OmapModelColor, type OmapModelObject, type OmapModelPoint, type OmapModelSymbol, type OmapModelSymbolKind, } from "./omap-model.js";
 export { cropOmapDoc, cropOmapXml, type OmapRect } from "./omap-crop.js";
