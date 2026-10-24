@@ -29,6 +29,7 @@ export type Pt = {
     /** This vertex ends its sub-path; the next one starts a new one (an area's hole). */
     holePoint: boolean;
 };
+/** A colour of the map's colour table, as the renderer uses it. */
 export type OmapColor = {
     name: string;
     rgb: string;
@@ -57,6 +58,7 @@ export declare function childByTag(el: Element, name: string): Element | null;
  * `<map>` at a fixed depth. Matches are not descended into.
  */
 export declare function findByTag(root: Element | Document, name: string): Element[];
+/** A numeric attribute, or `fallback` when it is missing or not a finite number. */
 export declare function num(el: Element | null, attr: string, fallback?: number): number;
 /**
  * The color table, keyed by the number symbols refer to it by.

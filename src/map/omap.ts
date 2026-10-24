@@ -40,6 +40,7 @@ export type Pt = {
   holePoint: boolean;
 };
 
+/** A colour of the map's colour table, as the renderer uses it. */
 export type OmapColor = {
   name: string;
   rgb: string;
@@ -144,6 +145,7 @@ export function findByTag(root: Element | Document, name: string): Element[] {
   return found;
 }
 
+/** A numeric attribute, or `fallback` when it is missing or not a finite number. */
 export function num(el: Element | null, attr: string, fallback = 0): number {
   const raw = el?.getAttribute(attr);
   if (raw === null || raw === undefined) return fallback;

@@ -8,6 +8,7 @@ const parse = (xml: string) =>
 
 /** A small map in the format's own shape, as in `omap.test.ts`. */
 function omap(body: {
+  colors?: string;
   symbols: string;
   parts: string[];
   scale?: number;
@@ -17,8 +18,11 @@ function omap(body: {
 <map xmlns="http://openorienteering.org/apps/mapper/xml/v2" version="9">
 <georeferencing scale="${body.scale ?? 10000}"${body.georeferencing === undefined ? "/>" : `>${body.georeferencing}</georeferencing>`}
 <colors count="2">
-<color priority="0" name="Svart" c="0" m="0" y="0" k="1"><rgb method="cmyk" r="0" g="0" b="0"/></color>
-<color priority="1" name="Gul" c="0" m="0.27" y="0.79" k="0"><rgb method="cmyk" r="1" g="0.8" b="0.2"/></color>
+${
+  body.colors ??
+  `<color priority="0" name="Svart" c="0" m="0" y="0" k="1"><rgb method="cmyk" r="0" g="0" b="0"/></color>
+<color priority="1" name="Gul" c="0" m="0.27" y="0.79" k="0"><rgb method="cmyk" r="1" g="0.8" b="0.2"/></color>`
+}
 </colors>
 <barrier version="6" required="0.6.0">
 <symbols count="9">${body.symbols}</symbols>
@@ -71,11 +75,62 @@ describe("parseOmapModel", () => {
     expect(m.symbols[0]!.appearance).toBe(m.symbols[2]!.appearance);
   });
 
-  it("names colours in the appearance, so renumbered colours compare equal", () => {
+  it("shows colours by name in the appearance", () => {
     const a = model(omap({ symbols: line("1", 100, 0), parts: [""] }));
     const b = model(omap({ symbols: line("1", 100, 1), parts: [""] }));
     expect(a.symbols[0]!.appearance).not.toBe(b.symbols[0]!.appearance);
     expect(a.symbols[0]!.appearance).toContain("Svart");
+  });
+
+  it("gives equal appearance when a named colour has another priority", () => {
+    const colors = (blackPriority: number, yellowPriority: number) =>
+      `<color priority="${blackPriority}" name="Svart" c="0" m="0" y="0" k="1"><rgb method="cmyk" r="0" g="0" b="0"/></color>` +
+      `<color priority="${yellowPriority}" name="Gul" c="0" m="0.27" y="0.79" k="0"><rgb method="cmyk" r="1" g="0.8" b="0.2"/></color>`;
+    const sym = (inner: number, outer: number) =>
+      `<symbol type="1" code="1" name="P"><point_symbol inner_radius="300" inner_color="${inner}" outer_width="100" outer_color="${outer}"/></symbol>`;
+    const a = model(omap({ colors: colors(0, 1), symbols: sym(1, 0), parts: [""] }));
+    const b = model(omap({ colors: colors(1, 0), symbols: sym(0, 1), parts: [""] }));
+    expect(a.symbols[0]!.appearance).toBe(b.symbols[0]!.appearance);
+  });
+
+  describe("combined symbols", () => {
+    const inline = (id: string, name: string, width: number) =>
+      `<part><symbol type="2" id="${id}" code="x" name="${name}"><line_symbol color="0" line_width="${width}"/></symbol></part>`;
+    const combined = (code: string, parts: string) =>
+      `<symbol type="16" code="${code}" name="K"><combined_symbol>${parts}</combined_symbol></symbol>`;
+
+    it("ignores the identity of inline parts", () => {
+      const m = model(
+        omap({
+          symbols: combined("1", inline("a", "En", 100)) + combined("2", inline("b", "Två", 100)),
+          parts: [""],
+        }),
+      );
+      expect(m.symbols[0]!.appearance).toBe(m.symbols[1]!.appearance);
+    });
+
+    it("sees a real look change in a part", () => {
+      const m = model(
+        omap({
+          symbols: combined("1", inline("a", "En", 100)) + combined("2", inline("a", "En", 150)),
+          parts: [""],
+        }),
+      );
+      expect(m.symbols[0]!.appearance).not.toBe(m.symbols[1]!.appearance);
+    });
+
+    it("compares referenced parts by the look of the symbol they point at", () => {
+      const ref = (n: number) => combined("c", `<part symbol="${n}"/>`);
+      const m = model(
+        omap({
+          // 0 and 1 look alike, 2 does not; 3 and 4 refer to them.
+          symbols: line("1", 100) + line("2", 100) + line("3", 200) + ref(0) + ref(1) + ref(2),
+          parts: [""],
+        }),
+      );
+      expect(m.symbols[3]!.appearance).toBe(m.symbols[4]!.appearance);
+      expect(m.symbols[3]!.appearance).not.toBe(m.symbols[5]!.appearance);
+    });
   });
 
   it("reads text and rotation", () => {

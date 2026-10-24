@@ -59,6 +59,7 @@ export function findByTag(root, name) {
     walk(root);
     return found;
 }
+/** A numeric attribute, or `fallback` when it is missing or not a finite number. */
 export function num(el, attr, fallback = 0) {
     const raw = el?.getAttribute(attr);
     if (raw === null || raw === undefined)

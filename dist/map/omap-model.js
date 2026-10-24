@@ -32,17 +32,23 @@ function symbolKind(el) {
 }
 /**
  * The element as a JSON-ready tree: attributes and children with keys in sorted
- * order, and every colour number replaced by the colour's name and rgb.
+ * order, every colour number replaced by the colour's name and rgb, identity
+ * (id, code, name, hidden) left out of every symbol, also nested ones, and a
+ * combined symbol's references to other symbols replaced by their look.
  */
-function canonical(el, colors, top) {
+function canonical(el, r) {
+    const isSymbol = el.localName === "symbol";
     const attrs = {};
     const names = Array.from(el.attributes, (a) => a.name).sort();
+    const reference = el.localName === "part" && !childByTag(el, "symbol") && el.hasAttribute("symbol");
     for (const name of names) {
-        if (top && IDENTITY_ATTRIBUTES.has(name))
+        if (isSymbol && IDENTITY_ATTRIBUTES.has(name))
+            continue;
+        if (reference && name === "symbol")
             continue;
         const value = el.getAttribute(name) ?? "";
         if (/(^|_)color$/.test(name) && /^-?\d+$/.test(value)) {
-            const color = colors.get(Number(value));
+            const color = r.colors.get(Number(value));
             attrs[name] = color ? `${color.name} ${color.rgb}` : "none";
         }
         else {
@@ -52,13 +58,15 @@ function canonical(el, colors, top) {
     const children = Array.from(el.childNodes).flatMap((n) => {
         if (n.nodeType === 1) {
             const child = n;
-            if (top && NON_VISUAL_CHILDREN.has(child.localName))
+            if (isSymbol && NON_VISUAL_CHILDREN.has(child.localName))
                 return [];
-            return [canonical(child, colors, false)];
+            return [canonical(child, r)];
         }
         const text = n.nodeType === 3 ? (n.nodeValue ?? "").trim() : "";
         return text ? [text] : [];
     });
+    if (reference)
+        children.push(r.look(num(el, "symbol", -1)));
     return { tag: el.localName, attrs, children };
 }
 /**
@@ -69,16 +77,31 @@ function canonical(el, colors, top) {
 export function parseOmapModel(doc) {
     const colorTable = parseColors(doc);
     const colors = [...colorTable.values()].map((c) => ({ index: c.order, name: c.name, rgb: c.rgb, priority: c.order }));
-    const symbols = findByTag(doc, "symbols")
-        .flatMap((el) => childrenByTag(el, "symbol"))
-        .map((el, index) => ({
-        index,
-        code: el.getAttribute("code") ?? "",
-        name: el.getAttribute("name") ?? "",
-        kind: symbolKind(el),
-        hidden: el.getAttribute("is_hidden") === "true",
-        appearance: JSON.stringify(canonical(el, colorTable, true)),
-    }));
+    const symbolEls = findByTag(doc, "symbols").flatMap((el) => childrenByTag(el, "symbol"));
+    const active = new Set();
+    const resolver = {
+        colors: colorTable,
+        look: (index) => {
+            const el = symbolEls[index];
+            if (!el || active.has(index))
+                return "missing";
+            active.add(index);
+            const tree = canonical(el, resolver);
+            active.delete(index);
+            return tree;
+        },
+    };
+    const symbols = symbolEls.map((el, index) => {
+        const appearance = JSON.stringify(canonical(el, resolver));
+        return {
+            index,
+            code: el.getAttribute("code") ?? "",
+            name: el.getAttribute("name") ?? "",
+            kind: symbolKind(el),
+            hidden: el.getAttribute("is_hidden") === "true",
+            appearance,
+        };
+    });
     const parts = findByTag(doc, "parts").flatMap((el) => childrenByTag(el, "part"));
     const objects = [];
     parts.forEach((partEl, part) => {
