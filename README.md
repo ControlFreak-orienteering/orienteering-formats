@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:HenrikF/orienteering-formats#v0.11.0"
+"orienteering-formats": "github:HenrikF/orienteering-formats#v0.12.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
@@ -61,7 +61,8 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
   exchange section, and IOF XML CourseData written from it; see "Course files from
   other programs".
 - **IOF XML StartList** files (Eventor, timing programs), read into the start list
-  form of the QR film; see "Course files from other programs".
+  form of the QR film, and written from it for Eventor's start list import; see
+  "Course files from other programs".
 - **Errors** are a `FormatError` with a `code`; each app turns the code into its own
   text.
 
@@ -190,7 +191,7 @@ Printed QR codes live for months, so the link format only ever grows:
 other programs write, and give the courses in the same form as the exchange section
 below (a `CourseSet`: a `CourseExchange` whose courses may also carry `family`,
 `classNames`, `partlyRead` and `tapedRoutes`), so an app reads every course file the
-same way. `orienteering-formats/iof` also writes that form as IOF XML, and reads start
+same way. `orienteering-formats/iof` also writes that form as IOF XML, and reads and writes start
 lists.
 
 - **IOF XML CourseData**, versions 3.0 and 2.0.3 (OCAD, Condes, Purple Pen,
@@ -221,6 +222,17 @@ lists.
   `time` "HH:MM:SS" as the file's wall clock, `name`, `club`, `class`, `card`, `start`)
   with `version`; `looksLikeIofStartList` recognises the file. Runners without a start
   time are left out, and relay teams are not read.
+- **Writing IOF XML 3.0 StartList**: `writeIofStartList(list, options)` writes a
+  `StartList` as the file Eventor's start list import and timing programs read: one
+  `<ClassStart>` per class in order of first runner, each runner's `name` split on its
+  last word into given and family name (`splitRunnerName`), `club` as the organisation,
+  `card` as `<ControlCard>`, and `course` and `start` at class level when the class's
+  runners share them. Start times are the list's clock times on `options.date` (else
+  `competition.date`, else today) with `options.utcOffsetMinutes` (else the computer's
+  offset on that day). `creator`, `createTime` and `eventId` (Eventor's event id, as
+  `<Event><Id>`) are the other options. Eventor matches runners without an Eventor id
+  on name and club, and classes on their names, so the file's class names must be
+  Eventor's. A list written here reads back the same.
 - **Purple Pen** (.ppen): `readPurplePen` gives the courses, `title` and `mapFileName`.
   Purple Pen has no positions on the earth; an app that needs them reads the named
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
