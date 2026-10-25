@@ -16,4 +16,5 @@ export { cropOcad, OcadCropError } from "./ocad/crop.js";
 export { parseOcadFile } from "./ocad/parser.js";
 export { escapeXml, renderMapSvg, } from "./ocad/render-svg.js";
 export { renderOmap } from "./omap.js";
+export { parseOmapModel, } from "./omap-model.js";
 export { cropOmapDoc, cropOmapXml } from "./omap-crop.js";

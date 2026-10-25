@@ -295,6 +295,10 @@ try {
 - The entry point also exports the lower-level readers ControlFreak uses: the parsed
   OCAD map (`parseOcadFile`, `renderMapSvg`), cropping (`cropOcad`, `cropOmapXml`) and
   conversion between map and earth coordinates (`mapToWgs84`, `wgs84ToMap`).
+- **A parsed `.omap`.** `parseOmapModel(doc)` gives the colours, symbols and objects of
+  an OpenOrienteering Mapper file as plain data (`OmapModel`), in the file's units. Each
+  symbol has an `appearance` string, the canonical JSON of its definition with colours
+  by name: two symbols with the same string look the same, so maps can be compared.
 - **Tests** can build small OCAD files with `OcdFileBuilder` from
   `orienteering-formats/map-testing`.
 
