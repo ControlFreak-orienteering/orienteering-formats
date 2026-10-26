@@ -7,7 +7,8 @@ This repository is **public**. Never commit secrets, keys or user data.
 - Keep the package small. It holds only file formats, the types they need, the map
   reader that draws map files as SVG (`src/map/`, its own entry point), the QR film
   start list and clock code (`orienteering-formats/qr`), the course link for virtual
-  controls (`orienteering-formats/run`), and the readers of other programs' course
+  controls (`orienteering-formats/run`), the live results protocol
+  (`orienteering-formats/cf-live`), and the readers of other programs' course
   files (`orienteering-formats/iof`, `orienteering-formats/purple-pen`), which give
   courses in the exchange section's form, with the IOF XML writer and start list reader
   beside them. App logic and UI stay in the apps.
@@ -34,3 +35,14 @@ This repository is **public**. Never commit secrets, keys or user data.
     the link prefixes.
   - `test/run-frozen.test.mjs` pins exact payloads to exact courses. Never change or remove
     a vector there (the pre-release vectors were dropped in v0.7.0); add one for every new version, flag or link form.
+- **The live results protocol (`src/cf-live.ts`) must stay backward compatible.** Sites
+  are built once from a prompt, by anyone, and often never rebuilt, so the app must keep
+  talking to every site ever built.
+  - Within a protocol version, only add optional fields. Never rename, remove or change the
+    meaning of a field, a status code or an `info` value.
+  - A change an older site would misread gets a new version in `CF_LIVE_VERSIONS`. Never
+    remove a version from that list.
+  - When the prompt in ControlFreak Event changes, raise `CF_LIVE_PROMPT_VERSION`, say what
+    changed in `CF_LIVE_PROMPT_CHANGES` and add its `info` answers to
+    `test/fixtures/cf-live/`. Never change or remove a fixture there.
+  - `dist/cf-live.js` must not import anything, so a site can load it alone from a CDN.
