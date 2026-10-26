@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:ControlFreak-orienteering/orienteering-formats#v0.14.0"
+"orienteering-formats": "github:ControlFreak-orienteering/orienteering-formats#v0.15.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
@@ -128,7 +128,7 @@ ControlFreak Event.
 
 ```ts
 import { applyUpload, infoAnswer } from
-  "https://cdn.jsdelivr.net/gh/ControlFreak-orienteering/orienteering-formats@v0.14.0/dist/cf-live.js";
+  "https://cdn.jsdelivr.net/gh/ControlFreak-orienteering/orienteering-formats@v0.15.0/dist/cf-live.js";
 ```
 
 **Compatibility:** sites are built once and rarely rebuilt, so the app agrees with every
@@ -136,6 +136,26 @@ site ever built. Within a protocol version fields are only added; a breaking cha
 version, and the app keeps speaking every old one (`CF_LIVE_VERSIONS`). `info.prompt` tells
 which prompt a site was built from (absent means 1), so the app can suggest rebuilding. The
 `info` answers of every prompt version are frozen in `test/fixtures/cf-live/`.
+
+## Live punches from ControlFreak Run
+
+`orienteering-formats/run-live` is how ControlFreak Run sends a runner's punches to a
+competition on ControlFreak Live, and how the site ranks them.
+
+- **The organiser** creates the competition on the site, which gives a runner link
+  (`runLiveLink`, `https://run.controlfreak.se/live#b=<base>&k=<key>`) for a QR code at the
+  start or on the map.
+- **The phone** reads the link (`parseRunLiveLink`), makes an id and a secret for the run
+  (`newRunnerId`) and sends the whole run each time with `PUT {base}/runners/{runnerId}`:
+  the runner's name, the course's name and control codes, the start, the punches and the
+  finish. Never the track or any position.
+- **The site** checks each upload (`parseRunLiveBody`), refuses another secret for a runner
+  it already holds, and ranks the runners per course (`runLiveStandings`).
+- `dist/run-live.js` imports nothing, like `cf-live`.
+
+**Compatibility:** runner links are printed, so `parseRunLiveLink` must keep reading every
+link ever made. Within version 1, fields are only added; a change an older site would
+misread is a new version.
 
 ## Course links for virtual controls
 

@@ -8,7 +8,8 @@ This repository is **public**. Never commit secrets, keys or user data.
   reader that draws map files as SVG (`src/map/`, its own entry point), the QR film
   start list and clock code (`orienteering-formats/qr`), the course link for virtual
   controls (`orienteering-formats/run`), the live results protocol
-  (`orienteering-formats/cf-live`), and the readers of other programs' course
+  (`orienteering-formats/cf-live`), the live punches from ControlFreak Run
+  (`orienteering-formats/run-live`), and the readers of other programs' course
   files (`orienteering-formats/iof`, `orienteering-formats/purple-pen`), which give
   courses in the exchange section's form, with the IOF XML writer and start list reader
   beside them. App logic and UI stay in the apps.
@@ -46,3 +47,7 @@ This repository is **public**. Never commit secrets, keys or user data.
     changed in `CF_LIVE_PROMPT_CHANGES` and add its `info` answers to
     `test/fixtures/cf-live/`. Never change or remove a fixture there.
   - `dist/cf-live.js` must not import anything, so a site can load it alone from a CDN.
+- **Live punches from Run (`src/run-live.ts`) must stay backward compatible.** Runner links
+  are printed on maps and at starts: never change what `parseRunLiveLink` reads or the
+  link prefix. Within version 1 only add optional fields; anything else is a new version.
+  `dist/run-live.js` must not import anything.
