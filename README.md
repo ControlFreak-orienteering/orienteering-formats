@@ -17,7 +17,7 @@ a change to the format is a deliberate new version rather than a silent break.
 Depend on a tagged version, never on a branch:
 
 ```json
-"orienteering-formats": "github:ControlFreak-orienteering/orienteering-formats#v0.12.0"
+"orienteering-formats": "github:ControlFreak-orienteering/orienteering-formats#v0.14.0"
 ```
 
 Reading a pack or project file (e.g. in ControlFreak Event):
@@ -112,6 +112,30 @@ sampler.offset(); // { offsetMs, samples }, offsetMs > 0 when the sender is ahea
 
 Errors are `FormatError`s with a code (`wrong-format`, `unreadable`), for the app to put
 into words.
+
+## Live results sites
+
+`orienteering-formats/cf-live` is the ControlFreak Live protocol: how ControlFreak Event
+sends live results to a site an organiser runs, often built by a vibe-coding tool from the
+prompt the app gives. The full description is `docs/custom-live/protocol.md` in
+ControlFreak Event.
+
+- **The app** reads the site's `info` (`parseInfo`), agrees on version, mode and encoding
+  (`agree`), and builds delta uploads (`deltaBetween`).
+- **The site** answers `info` (`infoAnswer`) and checks and applies uploads (`applyUpload`),
+  after checking the key.
+- `dist/cf-live.js` imports nothing, so a site can load it alone, pinned to a tag:
+
+```ts
+import { applyUpload, infoAnswer } from
+  "https://cdn.jsdelivr.net/gh/ControlFreak-orienteering/orienteering-formats@v0.14.0/dist/cf-live.js";
+```
+
+**Compatibility:** sites are built once and rarely rebuilt, so the app agrees with every
+site ever built. Within a protocol version fields are only added; a breaking change is a new
+version, and the app keeps speaking every old one (`CF_LIVE_VERSIONS`). `info.prompt` tells
+which prompt a site was built from (absent means 1), so the app can suggest rebuilding. The
+`info` answers of every prompt version are frozen in `test/fixtures/cf-live/`.
 
 ## Course links for virtual controls
 
