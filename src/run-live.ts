@@ -1,23 +1,40 @@
 /**
  * Live punches from ControlFreak Run ("cf-run-live"): how the runner's phone sends its run
- * to a ControlFreak Live competition while the runner is out, and how the site shows it.
+ * to ControlFreak Live while the runner is out, and how the site shows it.
  *
- * The organiser creates the competition on the site, which gives a **runner link**
- * ({@link runLiveLink}). A runner who opens it before the start has the phone send the run:
- * the name the runner gave, the course's name and control codes, the start, every punch
- * and the finish. Never the track or any position.
+ * There are two ways in, with the same body and the same answers:
+ *
+ * - **A competition.** The organiser creates the competition on the site, which gives a
+ *   **runner link** ({@link runLiveLink}). A runner who opens it before the start has the
+ *   phone send the run to `{base}` from the link, with `Authorization: Bearer <runner key>`.
+ *   The key is the same for every runner of the competition, since it is printed or shared
+ *   openly.
+ * - **An open course.** Any runner on any course link can send the run to the site's open
+ *   address, `{origin}{@link RUN_LIVE_OPEN_PATH}` ({@link runLiveOpenBase}), **without a
+ *   key**. The body then must carry `courseLink`; the site reads the course from it and
+ *   groups the runners of one course on one page by `openCourseId` (in
+ *   `orienteering-formats/run`), so two links of the same course meet on the same page.
+ *
+ * The body holds the name the runner gave, the course's name and control codes, the start,
+ * every punch and the finish, and optionally the runner's club (`club`) and the course link
+ * (`courseLink`). Never the track
+ * or any position.
  *
  * The phone sends the whole run each time, so a lost upload is mended by the next:
- * - `PUT {base}/runners/{runnerId}` with `Authorization: Bearer <runner key>` and a
- *   {@link RunLiveBody}. `{base}` and the key come from the runner link; the key is the
- *   same for every runner of the competition, since it is printed or shared openly.
+ * - `PUT {base}/runners/{runnerId}` ({@link runLiveRunnerUrl}) with a {@link RunLiveBody}.
  * - `runnerId` and `secret` are made by the phone for each run ({@link newRunnerId}). The
  *   site keeps a hash of the secret from the first upload and refuses a later upload for
  *   the same runner with another secret (`403`), so one runner cannot overwrite another.
- * - Answers: `204` stored, `400` not a body of this protocol, `401` wrong key, `403` wrong
- *   secret, `404` no such competition, `413` too large. CORS as in cf-live.
+ *   This holds on the open address too, which has no key.
+ * - Answers: `204` stored, `400` not a body of this protocol (on the open address also: no
+ *   readable `courseLink`), `401` wrong key, `403` wrong secret, `404` no such competition,
+ *   `413` too large. CORS as in cf-live.
  *
- * This module imports nothing, like `cf-live`.
+ * `club` and `courseLink` are optional fields within version 1: a body without them is as
+ * valid as before, and a site that does not know them drops them.
+ *
+ * This module imports nothing, like `cf-live`. The course id of an open course needs the
+ * course link reader, so it lives in `orienteering-formats/run` (`openCourseId`).
  */
 
 /** The protocol's name, in every body. */
@@ -29,8 +46,20 @@ export const RUN_LIVE_VERSION = 1;
 /** The longest name a runner may give, in characters. */
 export const RUN_LIVE_NAME_MAX = 60;
 
+/** The longest club a runner may give, in characters. */
+export const RUN_LIVE_CLUB_MAX = 60;
+
 /** Most controls a course may hold, as in the course link. */
 const MAX_CONTROLS = 1000;
+
+/**
+ * Path of the open address on a ControlFreak Live site, for runs on any course without a
+ * competition: the phone sends to `{origin}/api/public/cf-run/open/runners/{runnerId}`.
+ */
+export const RUN_LIVE_OPEN_PATH = "/api/public/cf-run/open";
+
+/** Longest `courseLink` kept, in characters: a course link of about 1000 controls. */
+export const RUN_LIVE_COURSE_LINK_MAX = 16_000;
 
 /** Address of the runner page in ControlFreak Run; the link's data follows `#`. */
 export const RUN_LIVE_LINK_PREFIX = "https://run.controlfreak.se/live#";
@@ -58,6 +87,9 @@ export interface RunLiveBody {
   secret: string;
   /** The name the runner gave, at most {@link RUN_LIVE_NAME_MAX} characters. */
   name: string;
+  /** The club the runner gave, at most {@link RUN_LIVE_CLUB_MAX} characters. Optional field
+   * within version 1. */
+  club?: string;
   course: {
     name: string;
     controls: RunLiveControl[];
@@ -72,6 +104,11 @@ export interface RunLiveBody {
   finishAt: number | null;
   /** When the phone made the body, ISO 8601. */
   generatedAt: string;
+  /**
+   * The course link's data after `#` (the run payload, without `#`). Needed on the open
+   * address, optional in a competition. Optional field within version 1.
+   */
+  courseLink?: string;
 }
 
 /** What the runner link carries. */
@@ -108,11 +145,36 @@ export function parseRunLiveLink(hash: string): RunLiveLink | null {
   return { base: base.replace(/\/+$/, ""), key };
 }
 
+/**
+ * The base address of a site's open courses, from the site's origin
+ * (e.g. `https://live.controlfreak.se`): `{origin}{@link RUN_LIVE_OPEN_PATH}`. Used like
+ * `base` of a runner link, but without a key.
+ *
+ * @throws {TypeError} When `origin` is not an absolute URL.
+ */
+export function runLiveOpenBase(origin: string): string {
+  return new URL(origin).origin + RUN_LIVE_OPEN_PATH;
+}
+
+/** Where the phone sends a runner's run: `{base}/runners/{runnerId}`. */
+export function runLiveRunnerUrl(base: string, runnerId: string): string {
+  return `${base.replace(/\/+$/, "")}/runners/${encodeURIComponent(runnerId)}`;
+}
+
 /** A new random runner id and secret, from the browser's Web Crypto. */
 export function newRunnerId(): { runnerId: string; secret: string } {
   const hex = (n: number) =>
     Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, "0")).join("");
   return { runnerId: hex(16), secret: hex(32) };
+}
+
+/** The course link's payload (a leading `#` removed) if it may be one, else null. */
+function checkCourseLink(x: unknown): string | null {
+  if (typeof x !== "string") return null;
+  const link = x.startsWith("#") ? x.slice(1) : x;
+  // The run payload alphabet, `0-9A-Z$*+-./:` (see `RUN_PAYLOAD_ALPHABET` in `run`).
+  if (!link || link.length > RUN_LIVE_COURSE_LINK_MAX || !/^[0-9A-Z$*+\-./:]+$/.test(link)) return null;
+  return link;
 }
 
 const isCount = (x: unknown): x is number => Number.isInteger(x) && (x as number) >= 0;
@@ -121,6 +183,12 @@ const isTime = (x: unknown): x is number => typeof x === "number" && Number.isFi
 /**
  * Checks an upload and returns it in a clean form, or null when it is not a body of this
  * protocol. Unknown fields are dropped: the site stores only what it shows.
+ *
+ * The optional `club` is kept trimmed when it is a string of 1 to {@link RUN_LIVE_CLUB_MAX}
+ * characters, and dropped otherwise. The optional `courseLink` is kept, without `#`, when it has only the course link's
+ * characters and at most {@link RUN_LIVE_COURSE_LINK_MAX} of them, and dropped otherwise, so
+ * it never costs the punches. Its course is not read here; the open address must still read
+ * it (`openCourseId`).
  */
 export function parseRunLiveBody(json: unknown): RunLiveBody | null {
   if (typeof json !== "object" || json === null || Array.isArray(json)) return null;
@@ -160,7 +228,9 @@ export function parseRunLiveBody(json: unknown): RunLiveBody | null {
     punches.push({ index: punch.index, at: punch.at });
   }
   if (b.finishAt !== null && !isTime(b.finishAt)) return null;
-  return {
+  const club = typeof b.club === "string" ? b.club.trim() : "";
+  const courseLink = checkCourseLink(b.courseLink);
+  const body: RunLiveBody = {
     protocol: RUN_LIVE_PROTOCOL,
     version: RUN_LIVE_VERSION,
     runnerId: b.runnerId,
@@ -172,12 +242,17 @@ export function parseRunLiveBody(json: unknown): RunLiveBody | null {
     finishAt: b.finishAt as number | null,
     generatedAt: typeof b.generatedAt === "string" ? b.generatedAt.slice(0, 40) : "",
   };
+  if (club && club.length <= RUN_LIVE_CLUB_MAX) body.club = club;
+  if (courseLink) body.courseLink = courseLink;
+  return body;
 }
 
 /** A runner's row in the standings. Times are ms since the runner's start. */
 export interface RunLiveRow {
   runnerId: string;
   name: string;
+  /** The club the runner gave, or null. */
+  club: string | null;
   /** `finished` once the phone has sent the finish, else `running`. */
   status: "running" | "finished";
   /** Place among the finished on the course (1, 2 …), or null while running or when not complete. */
@@ -221,6 +296,7 @@ function rowFor(body: RunLiveBody): RunLiveRow {
   return {
     runnerId: body.runnerId,
     name: body.name,
+    club: body.club ?? null,
     status: body.finishAt === null ? "running" : "finished",
     place: null,
     time,

@@ -20,3 +20,4 @@ export {
   type RunQrSegments,
   type RunScore,
 } from "./course.js";
+export { OPEN_COURSE_ID_LENGTH, openCourseId, openCourseKey } from "./open-course.js";
