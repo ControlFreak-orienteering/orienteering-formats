@@ -1,6 +1,6 @@
 /**
- * The id of an open course on ControlFreak Live: runners who send their run to the site's
- * open address (`RUN_LIVE_OPEN_PATH` in `orienteering-formats/run-live`) are grouped by the
+ * The id of a course's page on ControlFreak Live: runners who send their run to the site's
+ * keyless address (`RUN_LIVE_OPEN_PATH` in `orienteering-formats/run-live`) are grouped by the
  * course they ran, and two links of the same course must meet on the same page.
  *
  * The id is the first 16 hex characters (64 bits) of the SHA-256 of a canonical text of the
@@ -12,7 +12,7 @@
  * control moved by more than a metre or given another code makes another course. On a
  * score course the order of the controls carries no meaning, so they are sorted first.
  *
- * SHA-256 rather than a short non-cryptographic hash: anyone can send to the open address,
+ * SHA-256 rather than a short non-cryptographic hash: anyone can send to the keyless address,
  * and a course made to collide with another must not land on its page. It is computed here,
  * synchronously, rather than with Web Crypto: `crypto.subtle` is asynchronous and missing on
  * plain-http pages, and the id is wanted while building a link. Any language (the server,
@@ -23,7 +23,7 @@
  * never change; `test/run-frozen.test.mjs` pins an id.
  */
 import { runCourseFromHash } from "./course.js";
-/** Length of an open course id, in hex characters. */
+/** Length of a course id, in hex characters. */
 export const OPEN_COURSE_ID_LENGTH = 16;
 const grid = (deg) => Math.round(deg * 1e5);
 const pos = (p) => (p ? `${grid(p.lat)},${grid(p.lng)}` : "");
@@ -60,7 +60,7 @@ export function openCourseKey(course) {
     return ["oc1", kind, pos(course.start), controls.map((r) => r.join(",")).join(";"), pos(course.finish)].join("|");
 }
 /**
- * The id of an open course: the first {@link OPEN_COURSE_ID_LENGTH} hex characters of the
+ * The id of a course's page: the first {@link OPEN_COURSE_ID_LENGTH} hex characters of the
  * SHA-256 of {@link openCourseKey}.
  *
  * @param course - The course, or a course link: its data after `#`, with or without the `#`,
