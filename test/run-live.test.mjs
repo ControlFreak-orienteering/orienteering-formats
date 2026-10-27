@@ -5,9 +5,13 @@ import {
   newRunnerId,
   parseRunLiveBody,
   parseRunLiveLink,
+  RUN_LIVE_OPEN_PATH,
   runLiveLink,
+  runLiveOpenBase,
+  runLiveRunnerUrl,
   runLiveStandings,
 } from "../dist/run-live.js";
+import { readFileSync } from "node:fs";
 
 const T0 = Date.UTC(2026, 9, 26, 9, 0, 0);
 const course = { name: "Bana A", controls: [{ code: 31 }, { code: 32 }, { code: 33 }], score: null };
@@ -84,5 +88,63 @@ test("standings on a score course count points less the penalty", () => {
   assert.deepEqual(
     c.rows.map((r) => [r.name, r.points, r.place]),
     [["Late", 24, 1], ["In time", 20, 2]],
+  );
+});
+
+test("the open address is built from the site's origin", () => {
+  assert.equal(RUN_LIVE_OPEN_PATH, "/api/public/cf-run/open");
+  assert.equal(runLiveOpenBase("https://live.controlfreak.se"), "https://live.controlfreak.se/api/public/cf-run/open");
+  assert.equal(runLiveOpenBase("https://live.controlfreak.se/some/page?x=1"), "https://live.controlfreak.se/api/public/cf-run/open");
+  assert.equal(
+    runLiveRunnerUrl(runLiveOpenBase("http://localhost:8080/"), "ab12"),
+    "http://localhost:8080/api/public/cf-run/open/runners/ab12",
+  );
+  assert.equal(runLiveRunnerUrl("https://x.se/api/public/cf-run/abc/", "ab12"), "https://x.se/api/public/cf-run/abc/runners/ab12");
+  assert.throws(() => runLiveOpenBase("not a url"), TypeError);
+});
+
+test("an upload keeps courseLink within the limits, drops it otherwise, and ignores a track", () => {
+  const b = body("Anna", [[0, 300]]);
+  const parsed = parseRunLiveBody({ ...b, courseLink: "#0100ABC$*+-./:", track: { polyline: "_p~iF~ps|U", times: "??" } });
+  assert.equal(parsed.courseLink, "0100ABC$*+-./:", "kept without #");
+  assert.equal("track" in parsed, false, "unknown fields are dropped");
+  assert.equal(parsed.version, 1);
+
+  // A body of the first release, without the new field, is as valid as before.
+  const plain = parseRunLiveBody(b);
+  assert.equal("courseLink" in plain, false);
+
+  const dropped = (courseLink) => {
+    const p = parseRunLiveBody({ ...b, courseLink });
+    assert.notEqual(p, null, "the run itself is kept");
+    return !("courseLink" in p);
+  };
+  assert.ok(dropped(""));
+  assert.ok(dropped("#"));
+  assert.ok(dropped("lower case"));
+  assert.ok(dropped(42));
+  assert.ok(dropped("A".repeat(16_001)));
+  assert.equal(parseRunLiveBody({ ...b, courseLink: "A".repeat(16_000) }).courseLink.length, 16_000);
+});
+
+test("run-live imports nothing", () => {
+  const js = readFileSync(new URL("../dist/run-live.js", import.meta.url), "utf8");
+  assert.equal(/^\s*import\b|\bimport\(/m.test(js), false);
+});
+
+test("an upload keeps a club within the limit and drops it otherwise; standings show it", () => {
+  const b = body("Anna", [[0, 300]]);
+  assert.equal(parseRunLiveBody({ ...b, club: "  Söderhamns OK " }).club, "Söderhamns OK");
+  assert.equal(parseRunLiveBody({ ...b, club: "x".repeat(60) }).club.length, 60);
+  for (const club of ["", "   ", "x".repeat(61), 42, null]) {
+    const p = parseRunLiveBody({ ...b, club });
+    assert.notEqual(p, null, "the run itself is kept");
+    assert.equal("club" in p, false);
+  }
+  assert.equal("club" in parseRunLiveBody(b), false);
+  const [c] = runLiveStandings([parseRunLiveBody({ ...b, club: "SOK" }), parseRunLiveBody(body("Bo", []))]);
+  assert.deepEqual(
+    c.rows.map((r) => [r.name, r.club]),
+    [["Anna", "SOK"], ["Bo", null]],
   );
 });

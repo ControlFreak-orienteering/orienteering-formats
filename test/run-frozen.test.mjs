@@ -17,6 +17,8 @@ import { test } from "node:test";
 
 import {
   decodeRunCourse,
+  openCourseId,
+  openCourseKey,
   RUN_URL_PREFIX,
   runCourseFromHash,
 } from "../dist/run/index.js";
@@ -64,4 +66,18 @@ test("frozen: v0.6.0 score course", () => {
   };
   assert.deepEqual(decodeRunCourse(payload), course);
   assert.deepEqual(fromLink(`https://run.controlfreak.se/#${payload}`), course);
+});
+
+// Open course ids on ControlFreak Live (v0.16.0). Pages are named by the id and linked to, so
+// the canonical text and the hash must never change.
+test("frozen: v0.16.0 open course ids of the v0.6.0 vectors", () => {
+  assert.equal(
+    openCourseKey(TESTBANA),
+    "oc1|f|6130000,1706000|31,6130210,1706350;45,6130480,1705920;102,6130150,1705500|6130020,1706050",
+  );
+  assert.equal(openCourseId("160P61:1E+4G2LD9MDZ/MLX0HBM160GG4AM0ZU0$PL/DUT8EHY0X+0SG080"), "da32cc979303c9bf");
+  assert.equal(
+    openCourseId("https://run.controlfreak.se/#560HI1GKF.WMLDE2LDNJDLX0Z/MLX0HBM1601D4JUMG1QQA6$PL/DUI6ECFK+NR/5IUAS"),
+    "eaae7f5d0af41b25",
+  );
 });

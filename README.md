@@ -139,23 +139,37 @@ which prompt a site was built from (absent means 1), so the app can suggest rebu
 
 ## Live punches from ControlFreak Run
 
-`orienteering-formats/run-live` is how ControlFreak Run sends a runner's punches to a
-competition on ControlFreak Live, and how the site ranks them.
+`orienteering-formats/run-live` is how ControlFreak Run sends a runner's punches to
+ControlFreak Live, and how the site ranks them. A run goes either to a competition or, on
+any course, to the site's open courses.
 
 - **The organiser** creates the competition on the site, which gives a runner link
   (`runLiveLink`, `https://run.controlfreak.se/live#b=<base>&k=<key>`) for a QR code at the
   start or on the map.
+- **Open courses** need no organiser and no key: the phone sends to the site's open address,
+  `{origin}/api/public/cf-run/open` (`RUN_LIVE_OPEN_PATH`, `runLiveOpenBase(origin)`), with
+  the course link in the body (`courseLink`). The site groups the runners by
+  `openCourseId` from `orienteering-formats/run`: the first 16 hex characters of the SHA-256
+  of a canonical text of the course (`openCourseKey`: kind and score rules, start, control
+  codes and positions on the 1e-5° grid, finish; not the name; score controls sorted). Two
+  links of the same course meet on the same page; a control moved by a metre or given
+  another code makes another course.
 - **The phone** reads the link (`parseRunLiveLink`), makes an id and a secret for the run
-  (`newRunnerId`) and sends the whole run each time with `PUT {base}/runners/{runnerId}`:
-  the runner's name, the course's name and control codes, the start, the punches and the
-  finish. Never the track or any position.
-- **The site** checks each upload (`parseRunLiveBody`), refuses another secret for a runner
-  it already holds, and ranks the runners per course (`runLiveStandings`).
-- `dist/run-live.js` imports nothing, like `cf-live`.
+  (`newRunnerId`) and sends the whole run each time with `PUT {base}/runners/{runnerId}`
+  (`runLiveRunnerUrl`): the runner's name, the course's name and control codes, the start,
+  the punches and the finish, and optionally the runner's club and the course link. Never the track or any
+  position. The secret keeps one runner from overwriting another, on the open address too.
+- **The site** checks each upload (`parseRunLiveBody`, which keeps `club` (at most 60
+  characters) and `courseLink` within limits and drops them otherwise, and drops unknown
+  fields), refuses another secret for a runner it already
+  holds, and ranks the runners per course (`runLiveStandings`, each row with the runner's `club` or null).
+- `dist/run-live.js` imports nothing, like `cf-live`; `openCourseId` is in
+  `orienteering-formats/run`, since it reads the course link.
 
 **Compatibility:** runner links are printed, so `parseRunLiveLink` must keep reading every
-link ever made. Within version 1, fields are only added; a change an older site would
-misread is a new version.
+link ever made. Within version 1, fields are only added (`club` and `courseLink` are such fields); a change an older site would misread is a new version. Open course ids name pages
+people link to, so `openCourseKey` and the hash never change (pinned in
+`test/run-frozen.test.mjs`).
 
 ## Course links for virtual controls
 
