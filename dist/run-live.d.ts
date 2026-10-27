@@ -9,9 +9,9 @@
  *   phone send the run to `{base}` from the link, with `Authorization: Bearer <runner key>`.
  *   The key is the same for every runner of the competition, since it is printed or shared
  *   openly.
- * - **An open course.** Any runner on any course link can send the run to the site's open
- *   address, `{origin}{@link RUN_LIVE_OPEN_PATH}` ({@link runLiveOpenBase}), **without a
- *   key**. The body then must carry `courseLink`; the site reads the course from it and
+ * - **A course without a competition.** Any runner on any course link can send the run to the
+ *   site's address for courses, `{origin}{@link RUN_LIVE_OPEN_PATH}`
+ *   ({@link runLiveOpenBase}), **without a key**. The body then must carry `courseLink`; the site reads the course from it and
  *   groups the runners of one course on one page by `openCourseId` (in
  *   `orienteering-formats/run`), so two links of the same course meet on the same page.
  *
@@ -25,15 +25,15 @@
  * - `runnerId` and `secret` are made by the phone for each run ({@link newRunnerId}). The
  *   site keeps a hash of the secret from the first upload and refuses a later upload for
  *   the same runner with another secret (`403`), so one runner cannot overwrite another.
- *   This holds on the open address too, which has no key.
- * - Answers: `204` stored, `400` not a body of this protocol (on the open address also: no
+ *   This holds on the keyless address too.
+ * - Answers: `204` stored, `400` not a body of this protocol (on the keyless address also: no
  *   readable `courseLink`), `401` wrong key, `403` wrong secret, `404` no such competition,
  *   `413` too large. CORS as in cf-live.
  *
  * `club` and `courseLink` are optional fields within version 1: a body without them is as
  * valid as before, and a site that does not know them drops them.
  *
- * This module imports nothing, like `cf-live`. The course id of an open course needs the
+ * This module imports nothing, like `cf-live`. The id of a course's page needs the
  * course link reader, so it lives in `orienteering-formats/run` (`openCourseId`).
  */
 /** The protocol's name, in every body. */
@@ -45,7 +45,7 @@ export declare const RUN_LIVE_NAME_MAX = 60;
 /** The longest club a runner may give, in characters. */
 export declare const RUN_LIVE_CLUB_MAX = 60;
 /**
- * Path of the open address on a ControlFreak Live site, for runs on any course without a
+ * Path of the keyless address on a ControlFreak Live site, for runs on any course without a
  * competition: the phone sends to `{origin}/api/public/cf-run/open/runners/{runnerId}`.
  */
 export declare const RUN_LIVE_OPEN_PATH = "/api/public/cf-run/open";
@@ -115,7 +115,7 @@ export declare function runLiveLink(link: RunLiveLink): string;
  */
 export declare function parseRunLiveLink(hash: string): RunLiveLink | null;
 /**
- * The base address of a site's open courses, from the site's origin
+ * The base address of a site's courses (runs without a competition), from the site's origin
  * (e.g. `https://live.controlfreak.se`): `{origin}{@link RUN_LIVE_OPEN_PATH}`. Used like
  * `base` of a runner link, but without a key.
  *
@@ -136,7 +136,7 @@ export declare function newRunnerId(): {
  * The optional `club` is kept trimmed when it is a string of 1 to {@link RUN_LIVE_CLUB_MAX}
  * characters, and dropped otherwise. The optional `courseLink` is kept, without `#`, when it has only the course link's
  * characters and at most {@link RUN_LIVE_COURSE_LINK_MAX} of them, and dropped otherwise, so
- * it never costs the punches. Its course is not read here; the open address must still read
+ * it never costs the punches. Its course is not read here; the keyless address must still read
  * it (`openCourseId`).
  */
 export declare function parseRunLiveBody(json: unknown): RunLiveBody | null;
