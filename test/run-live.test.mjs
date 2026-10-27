@@ -75,6 +75,37 @@ test("standings: finished first by time, then those out by progress, then incomp
   assert.equal(a.rows[0].time, 800_000);
 });
 
+test("standings take the punches in course order, as Run and MeOS do", () => {
+  // As on Gul 3 at Virtuell Mo-natt 2026-10-27: code 37 is control 2 and control 4, and the
+  // phone punches both places at once; control 5 is passed early, on the way to control 2.
+  const twice = {
+    name: "Gul",
+    controls: [{ code: 48 }, { code: 37 }, { code: 38 }, { code: 37 }, { code: 34 }],
+    score: null,
+  };
+  const [c] = runLiveStandings([
+    body("Out", [[0, 300], [4, 500], [1, 900], [3, 900], [2, 1200]], null, { course: twice }),
+    body("Done", [[0, 280], [1, 700], [3, 700], [2, 1000], [3, 1300], [1, 1300], [4, 1500]], 1600, {
+      course: twice,
+    }),
+  ]);
+  const out = c.rows.find((r) => r.name === "Out");
+  // Control 4 (the second 37) is not taken yet, and control 5 not before control 4.
+  assert.deepEqual(out.splits, [300_000, 900_000, 1_200_000, null, null]);
+  assert.equal(out.taken, 3);
+  const done = c.rows.find((r) => r.name === "Done");
+  assert.deepEqual(done.splits, [280_000, 700_000, 1_000_000, 1_300_000, 1_500_000]);
+  assert.equal(done.complete, true);
+  assert.equal(done.place, 1);
+});
+
+test("a run with a control taken only out of order is not complete", () => {
+  const [c] = runLiveStandings([body("Early", [[0, 100], [2, 200], [1, 300]], 400)]);
+  assert.deepEqual(c.rows[0].splits, [100_000, 300_000, null]);
+  assert.equal(c.rows[0].complete, false);
+  assert.equal(c.rows[0].place, null);
+});
+
 test("standings on a score course count points less the penalty", () => {
   const score = {
     name: "Poäng",

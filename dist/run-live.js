@@ -191,12 +191,39 @@ export function parseRunLiveBody(json) {
         body.courseLink = courseLink;
     return body;
 }
+/**
+ * The time of each control in course order: for each control the first punch at it after
+ * the punch taken for the control before, in the order the punches were made (as Run's
+ * `matchCourse` and MeOS). A missing control leaves the search where it was.
+ */
+function inCourseOrder(controlCount, punches) {
+    const out = [];
+    let from = 0;
+    for (let i = 0; i < controlCount; i++) {
+        let hit = -1;
+        for (let j = from; j < punches.length; j++) {
+            if (punches[j].index === i) {
+                hit = j;
+                break;
+            }
+        }
+        if (hit < 0) {
+            out.push(null);
+            continue;
+        }
+        out.push(punches[hit].at);
+        from = hit + 1;
+    }
+    return out;
+}
 function rowFor(body) {
     const { controls, score } = body.course;
     const firstAt = new Map();
     for (const p of body.punches)
         if (!firstAt.has(p.index))
             firstAt.set(p.index, p.at);
+    const ordered = score ? [] : inCourseOrder(controls.length, body.punches);
+    const takenInOrder = ordered.filter((t) => t !== null).length;
     const time = body.finishAt === null ? null : Math.max(0, body.finishAt - body.startAt);
     let points = null;
     if (score) {
@@ -215,10 +242,10 @@ function rowFor(body) {
         status: body.finishAt === null ? "running" : "finished",
         place: null,
         time,
-        taken: firstAt.size,
-        splits: score ? [] : controls.map((_, i) => (firstAt.has(i) ? firstAt.get(i) - body.startAt : null)),
+        taken: score ? firstAt.size : takenInOrder,
+        splits: ordered.map((t) => (t === null ? null : t - body.startAt)),
         points,
-        complete: score ? true : firstAt.size === controls.length,
+        complete: score ? true : takenInOrder === controls.length,
         lastAt: Math.max(lastPunch, body.finishAt ?? 0),
     };
 }

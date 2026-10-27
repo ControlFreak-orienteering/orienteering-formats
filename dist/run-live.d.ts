@@ -152,13 +152,20 @@ export interface RunLiveRow {
     place: number | null;
     /** Running time to the finish, or null while running. */
     time: number | null;
-    /** Controls punched (each control once). */
+    /** Controls taken: on a score course each control punched, once; on a fixed-order course
+     * the controls taken in course order (see {@link RunLiveRow.splits}). */
     taken: number;
-    /** On a fixed-order course: the time at each control, in course order, or null if not punched. */
+    /**
+     * On a fixed-order course: the time at each control, in course order, or null if not
+     * taken. As in ControlFreak Run's own result and in MeOS, each control takes the first
+     * punch at it after the punch taken for the control before, in the order the punches were
+     * made; a missing control does not move that position. A punch out of order (a control
+     * passed early, or a code that is on the course twice) does not count where it was made.
+     */
     splits: (number | null)[];
     /** On a score course: points after the penalty, else null. */
     points: number | null;
-    /** On a fixed-order course: every control punched. Always true on a score course. */
+    /** On a fixed-order course: every control taken in course order. Always true on a score course. */
     complete: boolean;
     /** When the runner was last heard from, ms since 1970. */
     lastAt: number;

@@ -163,6 +163,9 @@ any course, to the course's page on the site, without a competition.
   characters) and `courseLink` within limits and drops them otherwise, and drops unknown
   fields), refuses another secret for a runner it already
   holds, and ranks the runners per course (`runLiveStandings`, each row with the runner's `club` or null).
+  On a fixed-order course each control takes the first punch at it after the control before,
+  in the order the punches were made, as Run's own result and MeOS do (since v0.16.1): a
+  control passed early, or a code that is on the course twice, does not count out of order.
 - `dist/run-live.js` imports nothing, like `cf-live`; `openCourseId` is in
   `orienteering-formats/run`, since it reads the course link.
 
