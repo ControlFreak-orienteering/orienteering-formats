@@ -259,13 +259,20 @@ export interface RunLiveRow {
   place: number | null;
   /** Running time to the finish, or null while running. */
   time: number | null;
-  /** Controls punched (each control once). */
+  /** Controls taken: on a score course each control punched, once; on a fixed-order course
+   * the controls taken in course order (see {@link RunLiveRow.splits}). */
   taken: number;
-  /** On a fixed-order course: the time at each control, in course order, or null if not punched. */
+  /**
+   * On a fixed-order course: the time at each control, in course order, or null if not
+   * taken. As in ControlFreak Run's own result and in MeOS, each control takes the first
+   * punch at it after the punch taken for the control before, in the order the punches were
+   * made; a missing control does not move that position. A punch out of order (a control
+   * passed early, or a code that is on the course twice) does not count where it was made.
+   */
   splits: (number | null)[];
   /** On a score course: points after the penalty, else null. */
   points: number | null;
-  /** On a fixed-order course: every control punched. Always true on a score course. */
+  /** On a fixed-order course: every control taken in course order. Always true on a score course. */
   complete: boolean;
   /** When the runner was last heard from, ms since 1970. */
   lastAt: number;
@@ -279,10 +286,38 @@ export interface RunLiveCourse {
   rows: RunLiveRow[];
 }
 
+/**
+ * The time of each control in course order: for each control the first punch at it after
+ * the punch taken for the control before, in the order the punches were made (as Run's
+ * `matchCourse` and MeOS). A missing control leaves the search where it was.
+ */
+function inCourseOrder(controlCount: number, punches: readonly RunLivePunch[]): (number | null)[] {
+  const out: (number | null)[] = [];
+  let from = 0;
+  for (let i = 0; i < controlCount; i++) {
+    let hit = -1;
+    for (let j = from; j < punches.length; j++) {
+      if (punches[j]!.index === i) {
+        hit = j;
+        break;
+      }
+    }
+    if (hit < 0) {
+      out.push(null);
+      continue;
+    }
+    out.push(punches[hit]!.at);
+    from = hit + 1;
+  }
+  return out;
+}
+
 function rowFor(body: RunLiveBody): RunLiveRow {
   const { controls, score } = body.course;
   const firstAt = new Map<number, number>();
   for (const p of body.punches) if (!firstAt.has(p.index)) firstAt.set(p.index, p.at);
+  const ordered = score ? [] : inCourseOrder(controls.length, body.punches);
+  const takenInOrder = ordered.filter((t) => t !== null).length;
   const time = body.finishAt === null ? null : Math.max(0, body.finishAt - body.startAt);
   let points: number | null = null;
   if (score) {
@@ -300,10 +335,10 @@ function rowFor(body: RunLiveBody): RunLiveRow {
     status: body.finishAt === null ? "running" : "finished",
     place: null,
     time,
-    taken: firstAt.size,
-    splits: score ? [] : controls.map((_, i) => (firstAt.has(i) ? firstAt.get(i)! - body.startAt : null)),
+    taken: score ? firstAt.size : takenInOrder,
+    splits: ordered.map((t) => (t === null ? null : t - body.startAt)),
     points,
-    complete: score ? true : firstAt.size === controls.length,
+    complete: score ? true : takenInOrder === controls.length,
     lastAt: Math.max(lastPunch, body.finishAt ?? 0),
   };
 }
