@@ -30,8 +30,8 @@
  *   readable `courseLink`), `401` wrong key, `403` wrong secret, `404` no such competition,
  *   `413` too large. CORS as in cf-live.
  *
- * `club` and `courseLink` are optional fields within version 1: a body without them is as
- * valid as before, and a site that does not know them drops them.
+ * `club`, `courseLink` and `startedAt` are optional fields within version 1: a body without
+ * them is as valid as before, and a site that does not know them drops them.
  *
  * This module imports nothing, like `cf-live`. The id of a course's page needs the
  * course link reader, so it lives in `orienteering-formats/run` (`openCourseId`).
@@ -88,6 +88,13 @@ export interface RunLiveBody {
     };
     /** The start, ms since 1970. */
     startAt: number;
+    /**
+     * When the start beep sounded on the phone, ms since 1970, or null while the runner is
+     * ready but has not started (the phone sends the run as soon as the runner is ready, before
+     * `startAt`). Absent from senders that do not report it; their runners count as started.
+     * Optional field within version 1 (since v0.17.0). See {@link runLiveAbandoned}.
+     */
+    startedAt?: number | null;
     /** Punches in the order they were made. */
     punches: RunLivePunch[];
     /** The finish, ms since 1970, or null while the runner is out. */
@@ -137,7 +144,8 @@ export declare function newRunnerId(): {
  * characters, and dropped otherwise. The optional `courseLink` is kept, without `#`, when it has only the course link's
  * characters and at most {@link RUN_LIVE_COURSE_LINK_MAX} of them, and dropped otherwise, so
  * it never costs the punches. Its course is not read here; the keyless address must still read
- * it (`openCourseId`).
+ * it (`openCourseId`). The optional `startedAt` is kept when it is null or a time, and dropped
+ * otherwise.
  */
 export declare function parseRunLiveBody(json: unknown): RunLiveBody | null;
 /** A runner's row in the standings. Times are ms since the runner's start. */
@@ -148,6 +156,11 @@ export interface RunLiveRow {
     club: string | null;
     /** `finished` once the phone has sent the finish, else `running`. */
     status: "running" | "finished";
+    /**
+     * Whether the start beep has sounded (or the runner punched or finished). False while the
+     * runner is only ready; true for senders that do not report it (no `startedAt`).
+     */
+    started: boolean;
     /** Place among the finished on the course (1, 2 …), or null while running or when not complete. */
     place: number | null;
     /** Running time to the finish, or null while running. */
@@ -178,9 +191,28 @@ export interface RunLiveCourse {
     rows: RunLiveRow[];
 }
 /**
+ * Whether the runner has started: the start beep sounded on the phone, or the runner punched
+ * or finished. A sender without `startedAt` counts as started, as before v0.17.0.
+ */
+export declare function runLiveStarted(body: RunLiveBody): boolean;
+/**
+ * How long after `startAt` a site waits for the start beep ({@link RunLiveBody.startedAt})
+ * before it treats the run as abandoned: long enough for an upload delayed by poor coverage.
+ */
+export declare const RUN_LIVE_START_GRACE_MS: number;
+/**
+ * Whether a run was abandoned before the start: the runner was ready, but the start beep has
+ * not come {@link RUN_LIVE_START_GRACE_MS} after the start time (`now`, ms since 1970). The
+ * runner gave up, ran another course or never ran; a site leaves such runs out of the
+ * standings. A later upload with the start beep brings the run back.
+ */
+export declare function runLiveAbandoned(body: RunLiveBody, now: number): boolean;
+/**
  * The standings, one entry per course name, courses in name order. Finished runners with a
  * complete run come first, by points (score) and time; then the runners still out, by how
- * many controls they have taken and how early they took the last one; then those who
- * finished without every control.
+ * many controls they have taken and how early they took the last one; then those who are
+ * ready but have not started (see {@link RunLiveRow.started}), by start time; then those who
+ * finished without every control. Abandoned runs ({@link runLiveAbandoned}) are the
+ * caller's to leave out, since that depends on the time.
  */
 export declare function runLiveStandings(bodies: readonly RunLiveBody[]): RunLiveCourse[];

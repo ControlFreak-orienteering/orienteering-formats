@@ -166,6 +166,10 @@ any course, to the course's page on the site, without a competition.
   On a fixed-order course each control takes the first punch at it after the control before,
   in the order the punches were made, as Run's own result and MeOS do (since v0.16.1): a
   control passed early, or a code that is on the course twice, does not count out of order.
+  The phone sends the run as soon as the runner is ready, before the start time, and reports
+  the start beep as `startedAt` (null until then; since v0.17.0). Rows say `started`;
+  senders without the field count as started. `runLiveAbandoned` tells a site which runs
+  never started `RUN_LIVE_START_GRACE_MS` (2 minutes) after their start time, to leave out.
 - `dist/run-live.js` imports nothing, like `cf-live`; `openCourseId` is in
   `orienteering-formats/run`, since it reads the course link.
 

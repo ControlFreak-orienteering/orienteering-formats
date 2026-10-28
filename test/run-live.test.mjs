@@ -9,6 +9,8 @@ import {
   runLiveLink,
   runLiveOpenBase,
   runLiveRunnerUrl,
+  runLiveAbandoned,
+  RUN_LIVE_START_GRACE_MS,
   runLiveStandings,
 } from "../dist/run-live.js";
 import { readFileSync } from "node:fs";
@@ -178,4 +180,31 @@ test("an upload keeps a club within the limit and drops it otherwise; standings 
     c.rows.map((r) => [r.name, r.club]),
     [["Anna", "SOK"], ["Bo", null]],
   );
+});
+
+test("an upload keeps startedAt when null or a time, and drops it otherwise", () => {
+  assert.equal(parseRunLiveBody(body("A", [])).startedAt, undefined);
+  assert.equal(parseRunLiveBody(body("A", [], null, { startedAt: null })).startedAt, null);
+  assert.equal(parseRunLiveBody(body("A", [], null, { startedAt: T0 })).startedAt, T0);
+  assert.equal(parseRunLiveBody(body("A", [], null, { startedAt: "soon" })).startedAt, undefined);
+});
+
+test("a ready runner has not started until the start beep, and is abandoned two minutes after the start", () => {
+  const ready = body("Ada", [], null, { startedAt: null });
+  const rows = runLiveStandings([
+    ready,
+    body("Bo", [], null, { startedAt: T0 }),
+    body("Cia", [[0, 60]], null, { startedAt: null }),
+    body("Dan", []),
+    body("Eva", [[0, 50], [1, 90]], 160, { startedAt: null }),
+  ])[0].rows;
+  const by = Object.fromEntries(rows.map((r) => [r.name, r.started]));
+  assert.deepEqual(by, { Ada: false, Bo: true, Cia: true, Dan: true, Eva: true });
+  // Those ready come after those out, before those who finished without every control.
+  assert.deepEqual(rows.map((r) => r.name).slice(-2), ["Ada", "Eva"]);
+  assert.equal(runLiveAbandoned(ready, T0 + RUN_LIVE_START_GRACE_MS), false);
+  assert.equal(runLiveAbandoned(ready, T0 + RUN_LIVE_START_GRACE_MS + 1), true);
+  assert.equal(runLiveAbandoned(body("Dan", []), T0 + 3_600_000), false);
+  assert.equal(runLiveAbandoned(body("Bo", [], null, { startedAt: T0 }), T0 + 3_600_000), false);
+  assert.equal(RUN_LIVE_START_GRACE_MS, 120_000);
 });
