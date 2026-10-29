@@ -9,6 +9,8 @@
  * - `<control id kind>` with `<code>` and `<location x y>`: the points. `kind` is
  *   `start`, `normal`, `finish`, `crossing-point`, `map-issue` or `map-exchange`.
  *   Locations are millimetres on the map with y upwards, from the map file's origin.
+ *   A start or finish with a `<code>` keeps it as its label, e.g. a start named after
+ *   the route that begins there; without one the label is "S" or "M".
  * - `<course id kind order>` with `<name>`, `<first course-control>` and
  *   `<options climb course-length>`. `kind` is `normal` or `score`.
  * - `<course-control id control points>` with `<next course-control>`: a linked list
@@ -55,6 +57,11 @@ export type PurplePenCourses = CourseSet & {
 export type ReadPurplePenOptions = {
   /** How the XML is parsed; the browser's `DOMParser` when not given. */
   parseXml?: XmlParse;
+  /**
+   * Read a file without courses too, e.g. one that only places start points, giving
+   * its points and no courses. Without it such a file is refused as `empty`.
+   */
+  allowNoCourses?: boolean;
 };
 
 /** Purple Pen point kinds as exchange kinds. Map issue and exchange points are skipped. */
@@ -75,7 +82,8 @@ export function looksLikePurplePen(xml: string): boolean {
  *
  * @param xml - The file's text; see `decodeXmlBytes` for getting it from bytes.
  * @throws {FormatError} `unreadable` for broken XML, `wrong-format` when the root is
- *   not `course-scribe-event`, and `empty` when the file has no courses.
+ *   not `course-scribe-event`, and `empty` when the file has no courses (unless
+ *   `allowNoCourses`).
  */
 export function readPurplePen(xml: string, options: ReadPurplePenOptions = {}): PurplePenCourses {
   const root = parseXmlRoot(xml, options.parseXml);
@@ -98,12 +106,17 @@ export function readPurplePen(xml: string, options: ReadPurplePenOptions = {}): 
     // Purple Pen counts y upwards; the exchange rule is y downwards.
     const y = -(numberOf(location?.getAttribute("y")) ?? 0);
     positions.set(id, { x, y });
-    const code = numberOf(childText(element, "code"));
+    const codeText = childText(element, "code").trim();
+    const code = numberOf(codeText);
     controls.push({
       id,
       kind,
       codes: kind === "control" && code !== undefined && Number.isInteger(code) && code > 0 ? [code] : [],
-      ...(kind === "start" ? { label: "S" } : kind === "finish" ? { label: "M" } : {}),
+      ...(kind === "start"
+        ? { label: codeText || "S" }
+        : kind === "finish"
+          ? { label: codeText || "M" }
+          : {}),
       x,
       y,
     });
@@ -120,7 +133,7 @@ export function readPurplePen(xml: string, options: ReadPurplePenOptions = {}): 
     .map((element, index) => ({ element, index, order: numberOf(element.getAttribute("order")) }))
     .sort((a, b) => (a.order ?? a.index) - (b.order ?? b.index) || a.index - b.index)
     .map((c) => c.element);
-  if (courseElements.length === 0) throw new FormatError("empty");
+  if (courseElements.length === 0 && !options.allowNoCourses) throw new FormatError("empty");
 
   const courses: CourseSetCourse[] = courseElements.map((element, index) => {
     const name = childText(element, "name");

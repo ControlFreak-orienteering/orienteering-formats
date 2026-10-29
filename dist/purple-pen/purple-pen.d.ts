@@ -9,6 +9,8 @@
  * - `<control id kind>` with `<code>` and `<location x y>`: the points. `kind` is
  *   `start`, `normal`, `finish`, `crossing-point`, `map-issue` or `map-exchange`.
  *   Locations are millimetres on the map with y upwards, from the map file's origin.
+ *   A start or finish with a `<code>` keeps it as its label, e.g. a start named after
+ *   the route that begins there; without one the label is "S" or "M".
  * - `<course id kind order>` with `<name>`, `<first course-control>` and
  *   `<options climb course-length>`. `kind` is `normal` or `score`.
  * - `<course-control id control points>` with `<next course-control>`: a linked list
@@ -42,6 +44,11 @@ export type PurplePenCourses = CourseSet & {
 export type ReadPurplePenOptions = {
     /** How the XML is parsed; the browser's `DOMParser` when not given. */
     parseXml?: XmlParse;
+    /**
+     * Read a file without courses too, e.g. one that only places start points, giving
+     * its points and no courses. Without it such a file is refused as `empty`.
+     */
+    allowNoCourses?: boolean;
 };
 /** Whether XML text looks like a Purple Pen file (checks the root element only). */
 export declare function looksLikePurplePen(xml: string): boolean;
@@ -50,6 +57,7 @@ export declare function looksLikePurplePen(xml: string): boolean;
  *
  * @param xml - The file's text; see `decodeXmlBytes` for getting it from bytes.
  * @throws {FormatError} `unreadable` for broken XML, `wrong-format` when the root is
- *   not `course-scribe-event`, and `empty` when the file has no courses.
+ *   not `course-scribe-event`, and `empty` when the file has no courses (unless
+ *   `allowNoCourses`).
  */
 export declare function readPurplePen(xml: string, options?: ReadPurplePenOptions): PurplePenCourses;
