@@ -63,6 +63,8 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
 - **IOF XML StartList** files (Eventor, timing programs), read into the start list
   form of the QR film, and written from it for Eventor's start list import; see
   "Course files from other programs".
+- **Live competitions from QR codes**: create or update a competition on ControlFreak
+  Live from Run course links, without a login; see "Live competitions from QR codes".
 - **Errors** are a `FormatError` with a `code`; each app turns the code into its own
   text.
 
@@ -177,6 +179,30 @@ any course, to the course's page on the site, without a competition.
 link ever made. Within version 1, fields are only added (`club` and `courseLink` are such fields); a change an older site would misread is a new version. Course ids name pages
 people link to, so `openCourseKey` and the hash never change (pinned in
 `test/run-frozen.test.mjs`).
+
+## Live competitions from QR codes
+
+`orienteering-formats/live-competition` (since v0.19.0) is how ControlFreak Run and
+ControlFreak Course create or update a competition on ControlFreak Live without a login.
+
+- **The client** builds a request with `liveCompetitionRequest(name, courses)`. Each course is
+  a Run course link or only its data (the text after the `#`); everything up to the first `#`
+  is cut, empty and repeated courses are dropped, and a name over 120 characters is cut. It
+  gives null for an empty name, no courses or more than 100 courses
+  (`LIVE_COMPETITION_NAME_MAX`, `LIVE_COMPETITION_COURSES_MAX`). It sends one `POST` with the
+  JSON to `liveCompetitionEndpoint(origin)`, `{origin}/api/public/cf-competition`
+  (`LIVE_COMPETITION_PATH`).
+- **The site** reads the body with `parseLiveCompetitionRequest` (same rules and limits) and
+  answers `200` with `{ id, url, code, outcome, taken }`: the competition's id and link, a
+  4-character admin code, what it did (`created`, `replaced` or `added`) and the courses it
+  left in other competitions (`taken`, each `{ course, competition }`). Other answers: `400`
+  bad request, `429` too many new competitions from one address, `500`. CORS as in cf-live.
+- **The client** reads the answer with `parseLiveCompetitionResponse`. The admin code
+  uses the letters and digits of `LIVE_COMPETITION_CODE_ALPHABET` (no I, L, O, 0, 1);
+  `normaliseLiveCompetitionCode` reads what a person typed (trimmed, capitals) or gives null.
+- `dist/live-competition.js` imports nothing, like `cf-live`.
+
+**Compatibility:** within version 1, fields are only added; anything else is a new version.
 
 ## Course links for virtual controls
 
