@@ -9,7 +9,8 @@ This repository is **public**. Never commit secrets, keys or user data.
   start list and clock code (`orienteering-formats/qr`), the course link for virtual
   controls (`orienteering-formats/run`), the live results protocol
   (`orienteering-formats/cf-live`), the live punches from ControlFreak Run
-  (`orienteering-formats/run-live`), and the readers of other programs' course
+  (`orienteering-formats/run-live`), the live competitions made from QR codes
+  (`orienteering-formats/live-competition`), and the readers of other programs' course
   files (`orienteering-formats/iof`, `orienteering-formats/purple-pen`), which give
   courses in the exchange section's form, with the IOF XML writer and start list reader
   beside them. App logic and UI stay in the apps.
@@ -53,3 +54,6 @@ This repository is **public**. Never commit secrets, keys or user data.
   `dist/run-live.js` must not import anything. Course ids (`openCourseId` in
   `src/run/open-course.ts`) name pages people link to: never change the canonical text
   (`openCourseKey`) or the hash; the frozen ids in `test/run-frozen.test.mjs` pin them.
+- **Live competitions (`src/live-competition.ts`) must stay backward compatible.** Clients
+  in released apps send to every site: within version 1 only add optional fields; anything
+  else is a new version. `dist/live-competition.js` must not import anything.
