@@ -197,7 +197,7 @@ ControlFreak Course create or update a competition on ControlFreak Live without 
   4-character admin code (none when the competition has an owner on the site, who changes it
   signed in; since v0.20.0), what it did (`created`, `replaced` or `added`) and the courses it
   left in other competitions (`taken`, each `{ course, competition }`). Other answers: `400`
-  bad request, `409` every course taken by other competitions, `413` body too large, `429` too many new competitions from one address, `500`. CORS as in cf-live.
+  bad request, `409` every course taken by other competitions, or the competition got an owner while the request was running ("owner changed"), `413` body too large, `429` too many new competitions from one address, `500`. CORS as in cf-live.
 - **The client** reads the answer with `parseLiveCompetitionResponse`. The admin code
   uses the letters and digits of `LIVE_COMPETITION_CODE_ALPHABET` (no I, L, O, 0, 1);
   `normaliseLiveCompetitionCode` reads what a person typed (trimmed, capitals) or gives null.

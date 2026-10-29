@@ -15,7 +15,8 @@
  * left there and listed in `taken`.
  *
  * Other answers: `400` not a request of this protocol, `409` every course is taken by other
- * competitions, `413` the body is too large, `429` too many new competitions from this
+ * competitions, or the competition got an owner while the request was running ("owner
+ * changed"), `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
  * Linked accounts (since v0.20.0): an app may send the **key** of a ControlFreak Live account
