@@ -301,7 +301,10 @@ lists.
 - **Purple Pen** (.ppen): `readPurplePen` gives the courses, `title` and `mapFileName`.
   Purple Pen has no positions on the earth; an app that needs them reads the named
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
-  forked course is read along its first variation and marked `partlyRead`.
+  forked course is read along its first variation and marked `partlyRead`. A start or
+  finish with a `<code>` gets it as its `label` ("S" or "M" without one). A file with
+  no courses is refused as `empty`, unless `{ allowNoCourses: true }` asks for its
+  points alone, e.g. a file that only places start points.
 - `isForkedCourse(set, course)` says whether a course is forked in any of these ways.
 - `joinCourseFamilies(set)` joins the courses of a 3.0 `family` into one forked course
   with `variations` (named after the family, id `family:<family>`, each variation coded

@@ -130,4 +130,20 @@ describe("readPurplePen", () => {
     expect(codeOf("<course-scribe-event/>")).toBe("empty");
     expect(codeOf("<course-scribe-event><broken")).toBe("unreadable");
   });
+
+  it("reads a file of start points only when asked, with the starts' names", () => {
+    const starts = `<?xml version="1.0" encoding="utf-8"?>
+<course-scribe-event>
+  <event id="1"><title>Watopia</title><map kind="OCAD" scale="4000">watopia.omap</map></event>
+  <control id="1" kind="start"><code>Volcano Circuit</code><location x="10" y="-20" /></control>
+  <control id="2" kind="start"><location x="30" y="40" /></control>
+</course-scribe-event>`;
+    expect(() => read(starts)).toThrow(FormatError);
+    const set = readPurplePen(starts, { parseXml, allowNoCourses: true });
+    expect(set.courses).toEqual([]);
+    expect(set.controls.map((c) => [c.kind, c.label, c.x, c.y])).toEqual([
+      ["start", "Volcano Circuit", 10, 20],
+      ["start", "S", 30, -40],
+    ]);
+  });
 });
