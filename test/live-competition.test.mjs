@@ -83,6 +83,9 @@ test("parse response", () => {
   assert.deepEqual(parseLiveCompetitionResponse(withTaken), withTaken);
   assert.equal(parseLiveCompetitionResponse({ ...ok, outcome: "gone" }), null);
   assert.equal(parseLiveCompetitionResponse({ ...ok, code: "K0QX" }), null);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, code: null }), null);
+  const { code: _, ...owned } = ok;
+  assert.deepEqual(parseLiveCompetitionResponse(owned), owned);
   assert.equal(parseLiveCompetitionResponse({ ...ok, id: "" }), null);
   assert.equal(parseLiveCompetitionResponse({ ...ok, url: 5 }), null);
   assert.equal(parseLiveCompetitionResponse({ ...ok, taken: [{ course: "a" }] }), null);

@@ -10,11 +10,13 @@
  * The site answers `200` with a {@link LiveCompetitionResponse}: the competition's id, its
  * link, a short **admin code** and what it did ({@link LiveCompetitionOutcome}). The admin
  * code ({@link normaliseLiveCompetitionCode}) lets the organiser come back and change the
- * competition without an account. Courses that already belong to another competition are
+ * competition without an account. A competition with an owner on the site gets no code: only
+ * the owner changes it, signed in. Courses that already belong to another competition are
  * left there and listed in `taken`.
  *
- * Other answers: `400` not a request of this protocol, `429` too many new competitions from
- * this address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
+ * Other answers: `400` not a request of this protocol, `409` every course is taken by other
+ * competitions, `413` the body is too large, `429` too many new competitions from this
+ * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
  * Within version 1, only optional fields are added; anything else is a new version.
  * This module imports nothing, like `cf-live`.
@@ -55,8 +57,12 @@ export interface LiveCompetitionResponse {
     id: string;
     /** The link to the competition's page. */
     url: string;
-    /** The admin code, {@link LIVE_COMPETITION_CODE_LENGTH} characters of {@link LIVE_COMPETITION_CODE_ALPHABET}. */
-    code: string;
+    /**
+     * The admin code, {@link LIVE_COMPETITION_CODE_LENGTH} characters of
+     * {@link LIVE_COMPETITION_CODE_ALPHABET}. Missing when the competition has an owner on the
+     * site (since v0.20.0; v0.19.0 required it, but no released app read it).
+     */
+    code?: string;
     /** What the site did. */
     outcome: LiveCompetitionOutcome;
     /** Courses left in other competitions; empty when none. */
