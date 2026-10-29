@@ -18,6 +18,14 @@
  * competitions, `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
+ * Linked accounts (since v0.20.0): an app may send the **key** of a ControlFreak Live account
+ * as `Authorization: Bearer <key>` ({@link liveCompetitionHeaders}); the site reads it with
+ * {@link parseLiveCompetitionKey}. A competition made with a key belongs to that account.
+ * A key the site does not know (or no longer knows) gets `401 {"error":"unknown key"}`: the
+ * app forgets the key and may retry once without it. The app gets the key by opening
+ * {@link liveLinkUrl} on the site: the page signs the user in and answers the opener with a
+ * {@link LiveLinkMessage} through `postMessage`.
+ *
  * Within version 1, only optional fields are added; anything else is a new version.
  * This module imports nothing, like `cf-live`.
  */
@@ -86,3 +94,41 @@ export declare function parseLiveCompetitionResponse(x: unknown): LiveCompetitio
 export declare function normaliseLiveCompetitionCode(s: string): string | null;
 /** The address to `POST` a request to, on the site at `origin` (any path on it is ignored). Throws on a bad URL. */
 export declare function liveCompetitionEndpoint(origin: string): string;
+/** Path of the page on a ControlFreak Live site where a user links an app to an account. */
+export declare const LIVE_LINK_PATH = "/koppla";
+/** The apps that can be linked to a Live account. */
+export type LiveLinkApp = "run" | "course";
+/**
+ * The address of the link page on the site at `origin` (any path on it is ignored), for the
+ * app `app` running at `returnOrigin`, the origin the page sends its message to. Throws on a
+ * bad `origin`.
+ */
+export declare function liveLinkUrl(origin: string, app: LiveLinkApp, returnOrigin: string): string;
+/** The message the link page posts to the app that opened it, once the user has linked. */
+export interface LiveLinkMessage {
+    /** Always `"cf-live-link"`. */
+    type: "cf-live-link";
+    /** Always 1. */
+    v: 1;
+    /** The app that is linked. */
+    app: LiveLinkApp;
+    /** The account's key, 43 characters of base64url. A secret: never log it or put it in a URL. */
+    key: string;
+    /** The account's e-mail address, to show the user which account is linked. */
+    account: string;
+}
+/** Builds the message the link page posts for `app`, the account's `key` and e-mail `account`. */
+export declare function liveLinkMessage(app: LiveLinkApp, key: string, account: string): LiveLinkMessage;
+/**
+ * Reads a link message; null if it is not one: wrong type, version or app, a key that is not
+ * 43 characters of base64url, or an account that is not a text of 1 to 254 characters.
+ * Unknown fields are dropped. The caller must also check the sender's origin.
+ */
+export declare function parseLiveLinkMessage(x: unknown): LiveLinkMessage | null;
+/** The headers of a request: JSON, and `Authorization: Bearer <key>` when the app is linked. */
+export declare function liveCompetitionHeaders(key: string | null): Record<string, string>;
+/**
+ * Site side: the key in an `Authorization` header (`Bearer <key>`), or null when the header
+ * is missing or is not a well-formed key.
+ */
+export declare function parseLiveCompetitionKey(authorization: string | null): string | null;

@@ -201,6 +201,16 @@ ControlFreak Course create or update a competition on ControlFreak Live without 
 - **The client** reads the answer with `parseLiveCompetitionResponse`. The admin code
   uses the letters and digits of `LIVE_COMPETITION_CODE_ALPHABET` (no I, L, O, 0, 1);
   `normaliseLiveCompetitionCode` reads what a person typed (trimmed, capitals) or gives null.
+- **Linking an app to a Live account** (since v0.20.0): the app opens
+  `liveLinkUrl(origin, app, returnOrigin)`, `{origin}/koppla?app=<run|course>&origin=<returnOrigin>`
+  (`LIVE_LINK_PATH`). After sign-in the page posts a `LiveLinkMessage`
+  (`liveLinkMessage(app, key, account)`: `{ type: "cf-live-link", v: 1, app, key, account }`,
+  the key being 43 characters of base64url and `account` the e-mail) to `returnOrigin`. The app
+  reads it with `parseLiveLinkMessage` (null for anything else) and must also check that
+  `event.origin` is the Live site. It then sends `liveCompetitionHeaders(key)`, which adds
+  `Authorization: Bearer <key>`; the site reads it with `parseLiveCompetitionKey`. A key the
+  site does not know gets `401 {"error":"unknown key"}`: the app forgets the key and retries
+  once without it.
 - `dist/live-competition.js` imports nothing, like `cf-live`.
 
 **Compatibility:** within version 1, fields are only added; anything else is a new version.

@@ -18,6 +18,14 @@
  * competitions, `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
+ * Linked accounts (since v0.20.0): an app may send the **key** of a ControlFreak Live account
+ * as `Authorization: Bearer <key>` ({@link liveCompetitionHeaders}); the site reads it with
+ * {@link parseLiveCompetitionKey}. A competition made with a key belongs to that account.
+ * A key the site does not know (or no longer knows) gets `401 {"error":"unknown key"}`: the
+ * app forgets the key and may retry once without it. The app gets the key by opening
+ * {@link liveLinkUrl} on the site: the page signs the user in and answers the opener with a
+ * {@link LiveLinkMessage} through `postMessage`.
+ *
  * Within version 1, only optional fields are added; anything else is a new version.
  * This module imports nothing, like `cf-live`.
  */
@@ -117,4 +125,55 @@ export function normaliseLiveCompetitionCode(s) {
 /** The address to `POST` a request to, on the site at `origin` (any path on it is ignored). Throws on a bad URL. */
 export function liveCompetitionEndpoint(origin) {
     return new URL(origin).origin + LIVE_COMPETITION_PATH;
+}
+/** Path of the page on a ControlFreak Live site where a user links an app to an account. */
+export const LIVE_LINK_PATH = "/koppla";
+/** What a link key looks like: 32 random bytes as base64url without padding. */
+const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+/** The longest account name (an e-mail address) in a link message, in characters. */
+const ACCOUNT_MAX = 254;
+/**
+ * The address of the link page on the site at `origin` (any path on it is ignored), for the
+ * app `app` running at `returnOrigin`, the origin the page sends its message to. Throws on a
+ * bad `origin`.
+ */
+export function liveLinkUrl(origin, app, returnOrigin) {
+    return `${new URL(origin).origin}${LIVE_LINK_PATH}?app=${app}&origin=${encodeURIComponent(returnOrigin)}`;
+}
+/** Builds the message the link page posts for `app`, the account's `key` and e-mail `account`. */
+export function liveLinkMessage(app, key, account) {
+    return { type: "cf-live-link", v: 1, app, key, account };
+}
+/**
+ * Reads a link message; null if it is not one: wrong type, version or app, a key that is not
+ * 43 characters of base64url, or an account that is not a text of 1 to 254 characters.
+ * Unknown fields are dropped. The caller must also check the sender's origin.
+ */
+export function parseLiveLinkMessage(x) {
+    if (!isRecord(x) || x.type !== "cf-live-link" || x.v !== 1)
+        return null;
+    if (x.app !== "run" && x.app !== "course")
+        return null;
+    if (typeof x.key !== "string" || !KEY_PATTERN.test(x.key))
+        return null;
+    if (typeof x.account !== "string" || x.account.length < 1 || x.account.length > ACCOUNT_MAX)
+        return null;
+    return liveLinkMessage(x.app, x.key, x.account);
+}
+/** The headers of a request: JSON, and `Authorization: Bearer <key>` when the app is linked. */
+export function liveCompetitionHeaders(key) {
+    const headers = { "Content-Type": "application/json" };
+    if (key)
+        headers.Authorization = "Bearer " + key;
+    return headers;
+}
+/**
+ * Site side: the key in an `Authorization` header (`Bearer <key>`), or null when the header
+ * is missing or is not a well-formed key.
+ */
+export function parseLiveCompetitionKey(authorization) {
+    if (!authorization?.startsWith("Bearer "))
+        return null;
+    const key = authorization.slice(7);
+    return KEY_PATTERN.test(key) ? key : null;
 }

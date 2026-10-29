@@ -8,7 +8,13 @@ import {
   LIVE_COMPETITION_NAME_MAX,
   LIVE_COMPETITION_PATH,
   LIVE_COMPETITION_VERSION,
+  LIVE_LINK_PATH,
   liveCompetitionEndpoint,
+  liveCompetitionHeaders,
+  liveLinkMessage,
+  liveLinkUrl,
+  parseLiveCompetitionKey,
+  parseLiveLinkMessage,
   liveCompetitionRequest,
   normaliseLiveCompetitionCode,
   parseLiveCompetitionRequest,
@@ -107,4 +113,60 @@ test("endpoint", () => {
   );
   assert.equal(liveCompetitionEndpoint("http://localhost:8080"), "http://localhost:8080/api/public/cf-competition");
   assert.throws(() => liveCompetitionEndpoint("not a url"));
+});
+
+const KEY = "A".repeat(43);
+const KEY2 = "abcDEF-_09".repeat(4) + "xyz";
+
+test("link url", () => {
+  assert.equal(LIVE_LINK_PATH, "/koppla");
+  assert.equal(
+    liveLinkUrl("https://live.controlfreak.se/x", "run", "https://run.controlfreak.se"),
+    "https://live.controlfreak.se/koppla?app=run&origin=https%3A%2F%2Frun.controlfreak.se",
+  );
+  assert.equal(
+    liveLinkUrl("http://localhost:8080", "course", "http://localhost:5173"),
+    "http://localhost:8080/koppla?app=course&origin=http%3A%2F%2Flocalhost%3A5173",
+  );
+  assert.throws(() => liveLinkUrl("not a url", "run", "https://run.controlfreak.se"));
+});
+
+test("link message: build and read", () => {
+  const m = liveLinkMessage("run", KEY, "a@b.se");
+  assert.deepEqual(m, { type: "cf-live-link", v: 1, app: "run", key: KEY, account: "a@b.se" });
+  assert.deepEqual(parseLiveLinkMessage(m), m);
+  assert.deepEqual(parseLiveLinkMessage({ ...liveLinkMessage("course", KEY2, "x".repeat(254)) }).app, "course");
+});
+
+test("link message: rejections", () => {
+  const ok = liveLinkMessage("run", KEY, "a@b.se");
+  const bad = [
+    null, undefined, "x", 1, [], {},
+    { ...ok, type: "other" },
+    { ...ok, v: 2 },
+    { ...ok, app: "live" },
+    { ...ok, key: KEY.slice(1) },
+    { ...ok, key: KEY + "A" },
+    { ...ok, key: "+".repeat(43) },
+    { ...ok, key: 5 },
+    { ...ok, account: "" },
+    { ...ok, account: "x".repeat(255) },
+    { ...ok, account: 5 },
+  ];
+  for (const b of bad) assert.equal(parseLiveLinkMessage(b), null, JSON.stringify(b));
+});
+
+test("headers", () => {
+  assert.deepEqual(liveCompetitionHeaders(null), { "Content-Type": "application/json" });
+  assert.deepEqual(liveCompetitionHeaders(KEY), {
+    "Content-Type": "application/json",
+    Authorization: "Bearer " + KEY,
+  });
+});
+
+test("key from authorization", () => {
+  assert.equal(parseLiveCompetitionKey("Bearer " + KEY), KEY);
+  for (const bad of [null, "", "Bearer", "Bearer ", "bearer " + KEY, "Basic " + KEY, "Bearer " + KEY.slice(1), "Bearer " + KEY + "A", "Bearer " + KEY + " "]) {
+    assert.equal(parseLiveCompetitionKey(bad), null, String(bad));
+  }
 });
