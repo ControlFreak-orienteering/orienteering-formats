@@ -193,13 +193,13 @@ ControlFreak Course create or update a competition on ControlFreak Live without 
   JSON to `liveCompetitionEndpoint(origin)`, `{origin}/api/public/cf-competition`
   (`LIVE_COMPETITION_PATH`).
 - **The site** reads the body with `parseLiveCompetitionRequest` (same rules and limits) and
-  answers `200` with `{ id, url, owned, outcome, taken }`: the competition's id and link,
+  answers `200` with `{ id, url, owned, published, outcome, taken }`: the competition's id and link,
   whether it has an owner on the site (`owned`, since v0.20.0; only the owner changes an owned
   competition, and a signed-in user takes over one without an owner on the site), what it did (`created`, `replaced` or `added`) and the courses it
   left in other competitions (`taken`, each `{ course, competition, owned }`; `owned` since
   v0.20.0). Other answers: `400` bad request, `409` every course taken by other competitions
   (with the same `taken` list since v0.20.0; read it with `parseLiveCompetitionConflict`), or the competition got an owner while the request was running ("owner changed"), `413` body too large, `429` too many new competitions from one address, `500`. CORS as in cf-live.
-- **Publishing** (since v0.21.0): the request may hold `publish: true | false`
+- **Publishing** (since v0.20.0): the request may hold `publish: true | false`
   (`liveCompetitionRequest(name, courses, publish?)`, set only when given), and the answer
   `published` (boolean, missing from older sites) says whether the results are public. Absent
   `publish`: a new competition is hidden, an existing one is unchanged.

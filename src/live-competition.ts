@@ -11,7 +11,7 @@
  * link, whether it has an owner on the site, and what it did ({@link LiveCompetitionOutcome}).
  * A competition without an owner may be changed by anyone who sends the same name with starts
  * close by; a signed-in user takes it over on the site. Only the owner changes an owned one.
- * `publish` (since v0.21.0) asks the site to make the results public or hidden; the answer's
+ * `publish` (since v0.20.0) asks the site to make the results public or hidden; the answer's
  * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
  * is unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
@@ -63,7 +63,7 @@ export interface LiveCompetitionRequest {
   /** Each course as the data of a Run course link, the text after the `#`. */
   courses: string[];
   /**
-   * Whether the competition's results are public on the site (since v0.21.0). Absent: a new
+   * Whether the competition's results are public on the site (since v0.20.0). Absent: a new
    * competition is made hidden and an existing one keeps its setting.
    */
   publish?: boolean;
@@ -110,7 +110,7 @@ export interface LiveCompetitionResponse {
   owned?: boolean;
   /**
    * True when the competition's results are public on the site after the request (since
-   * v0.21.0). Missing from older sites.
+   * v0.20.0). Missing from older sites.
    */
   published?: boolean;
   /** What the site did. */

@@ -11,7 +11,7 @@
  * link, whether it has an owner on the site, and what it did ({@link LiveCompetitionOutcome}).
  * A competition without an owner may be changed by anyone who sends the same name with starts
  * close by; a signed-in user takes it over on the site. Only the owner changes an owned one.
- * `publish` (since v0.21.0) asks the site to make the results public or hidden; the answer's
+ * `publish` (since v0.20.0) asks the site to make the results public or hidden; the answer's
  * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
  * is unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
