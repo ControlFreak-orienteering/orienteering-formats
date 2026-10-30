@@ -16,7 +16,8 @@
  * readers.
  *
  * Other answers: `400` not a request of this protocol, `409` every course is taken by other
- * competitions, or the competition got an owner while the request was running ("owner
+ * competitions (`{"error":"all courses taken","taken":[…]}`, read with
+ * {@link parseLiveCompetitionConflict}; `taken` since v0.20.0), or the competition got an owner while the request was running ("owner
  * changed"), `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
@@ -58,6 +59,15 @@ export interface LiveCompetitionTaken {
     course: string;
     /** The name of the other competition that holds it. */
     competition: string;
+    /** True when that competition has an owner on the site (since v0.20.0). */
+    owned?: boolean;
+}
+/** The body of a `409` answer. */
+export interface LiveCompetitionConflict {
+    /** `"all courses taken"` or `"owner changed"`. */
+    error: string;
+    /** For `"all courses taken"`: where each course is (since v0.20.0); empty when not sent. */
+    taken: LiveCompetitionTaken[];
 }
 /** What the site did: made a new competition, replaced the courses of one, or added to it. */
 export type LiveCompetitionOutcome = "created" | "replaced" | "added";
@@ -95,6 +105,11 @@ export declare function liveCompetitionRequest(name: string, courses: readonly s
 export declare function parseLiveCompetitionRequest(x: unknown): LiveCompetitionRequest | null;
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */
 export declare function parseLiveCompetitionResponse(x: unknown): LiveCompetitionResponse | null;
+/**
+ * Reads the body of a `409` answer; null if it is not one. A missing or unreadable `taken`
+ * (older sites) reads as empty.
+ */
+export declare function parseLiveCompetitionConflict(x: unknown): LiveCompetitionConflict | null;
 /**
  * Reads an admin code as a person types it: trimmed and in capitals. Null unless it is
  * {@link LIVE_COMPETITION_CODE_LENGTH} characters of {@link LIVE_COMPETITION_CODE_ALPHABET}.

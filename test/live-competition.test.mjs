@@ -18,6 +18,7 @@ import {
   liveCompetitionRequest,
   normaliseLiveCompetitionCode,
   parseLiveCompetitionRequest,
+  parseLiveCompetitionConflict,
   parseLiveCompetitionResponse,
 } from "../dist/live-competition.js";
 
@@ -101,6 +102,24 @@ test("parse response", () => {
   assert.equal(parseLiveCompetitionResponse({ ...ok, taken: [{ course: "a" }] }), null);
   assert.equal(parseLiveCompetitionResponse({ ...ok, taken: "x" }), null);
   assert.equal(parseLiveCompetitionResponse(null), null);
+});
+
+test("parse conflict", () => {
+  const taken = [{ course: "Bana A", competition: "Höstträning", owned: true }];
+  assert.deepEqual(parseLiveCompetitionConflict({ error: "all courses taken", taken }), {
+    error: "all courses taken",
+    taken,
+  });
+  assert.deepEqual(parseLiveCompetitionConflict({ error: "owner changed" }), { error: "owner changed", taken: [] });
+  assert.deepEqual(parseLiveCompetitionConflict({ error: "all courses taken", taken: [{ course: 1 }] }), {
+    error: "all courses taken",
+    taken: [],
+  });
+  assert.equal(parseLiveCompetitionConflict({ error: "" }), null);
+  assert.equal(parseLiveCompetitionConflict(null), null);
+  const withOwned = { id: "abcd1234", url: "u", outcome: "added", taken };
+  assert.deepEqual(parseLiveCompetitionResponse(withOwned), withOwned);
+  assert.equal(parseLiveCompetitionResponse({ ...withOwned, taken: [{ ...taken[0], owned: 1 }] }), null);
 });
 
 test("code", () => {

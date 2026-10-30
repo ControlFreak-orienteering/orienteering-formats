@@ -16,7 +16,8 @@
  * readers.
  *
  * Other answers: `400` not a request of this protocol, `409` every course is taken by other
- * competitions, or the competition got an owner while the request was running ("owner
+ * competitions (`{"error":"all courses taken","taken":[…]}`, read with
+ * {@link parseLiveCompetitionConflict}; `taken` since v0.20.0), or the competition got an owner while the request was running ("owner
  * changed"), `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
@@ -102,18 +103,39 @@ export function parseLiveCompetitionResponse(x) {
         return null;
     if (!Array.isArray(taken))
         return null;
-    const list = [];
-    for (const t of taken) {
-        if (!isRecord(t) || typeof t.course !== "string" || typeof t.competition !== "string")
-            return null;
-        list.push({ course: t.course, competition: t.competition });
-    }
+    const list = parseTaken(taken);
+    if (!list)
+        return null;
     const response = { id, url, outcome: outcome, taken: list };
     if (code !== undefined)
         response.code = code;
     if (owned !== undefined)
         response.owned = owned;
     return response;
+}
+function parseTaken(taken) {
+    const list = [];
+    for (const t of taken) {
+        if (!isRecord(t) || typeof t.course !== "string" || typeof t.competition !== "string")
+            return null;
+        if (t.owned !== undefined && typeof t.owned !== "boolean")
+            return null;
+        const item = { course: t.course, competition: t.competition };
+        if (t.owned !== undefined)
+            item.owned = t.owned;
+        list.push(item);
+    }
+    return list;
+}
+/**
+ * Reads the body of a `409` answer; null if it is not one. A missing or unreadable `taken`
+ * (older sites) reads as empty.
+ */
+export function parseLiveCompetitionConflict(x) {
+    if (!isRecord(x) || typeof x.error !== "string" || !x.error)
+        return null;
+    const taken = Array.isArray(x.taken) ? parseTaken(x.taken) : null;
+    return { error: x.error, taken: taken ?? [] };
 }
 /**
  * Reads an admin code as a person types it: trimmed and in capitals. Null unless it is

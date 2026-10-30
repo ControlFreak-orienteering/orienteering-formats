@@ -16,7 +16,8 @@
  * readers.
  *
  * Other answers: `400` not a request of this protocol, `409` every course is taken by other
- * competitions, or the competition got an owner while the request was running ("owner
+ * competitions (`{"error":"all courses taken","taken":[…]}`, read with
+ * {@link parseLiveCompetitionConflict}; `taken` since v0.20.0), or the competition got an owner while the request was running ("owner
  * changed"), `413` the body is too large, `429` too many new competitions from this
  * address, `500` the site failed. CORS as in cf-live, so a browser app may call it.
  *
@@ -66,6 +67,16 @@ export interface LiveCompetitionTaken {
   course: string;
   /** The name of the other competition that holds it. */
   competition: string;
+  /** True when that competition has an owner on the site (since v0.20.0). */
+  owned?: boolean;
+}
+
+/** The body of a `409` answer. */
+export interface LiveCompetitionConflict {
+  /** `"all courses taken"` or `"owner changed"`. */
+  error: string;
+  /** For `"all courses taken"`: where each course is (since v0.20.0); empty when not sent. */
+  taken: LiveCompetitionTaken[];
 }
 
 /** What the site did: made a new competition, replaced the courses of one, or added to it. */
@@ -149,15 +160,34 @@ export function parseLiveCompetitionResponse(x: unknown): LiveCompetitionRespons
   if (owned !== undefined && typeof owned !== "boolean") return null;
   if (typeof outcome !== "string" || !OUTCOMES.includes(outcome)) return null;
   if (!Array.isArray(taken)) return null;
-  const list: LiveCompetitionTaken[] = [];
-  for (const t of taken) {
-    if (!isRecord(t) || typeof t.course !== "string" || typeof t.competition !== "string") return null;
-    list.push({ course: t.course, competition: t.competition });
-  }
+  const list = parseTaken(taken);
+  if (!list) return null;
   const response: LiveCompetitionResponse = { id, url, outcome: outcome as LiveCompetitionOutcome, taken: list };
   if (code !== undefined) response.code = code;
   if (owned !== undefined) response.owned = owned;
   return response;
+}
+
+function parseTaken(taken: unknown[]): LiveCompetitionTaken[] | null {
+  const list: LiveCompetitionTaken[] = [];
+  for (const t of taken) {
+    if (!isRecord(t) || typeof t.course !== "string" || typeof t.competition !== "string") return null;
+    if (t.owned !== undefined && typeof t.owned !== "boolean") return null;
+    const item: LiveCompetitionTaken = { course: t.course, competition: t.competition };
+    if (t.owned !== undefined) item.owned = t.owned;
+    list.push(item);
+  }
+  return list;
+}
+
+/**
+ * Reads the body of a `409` answer; null if it is not one. A missing or unreadable `taken`
+ * (older sites) reads as empty.
+ */
+export function parseLiveCompetitionConflict(x: unknown): LiveCompetitionConflict | null {
+  if (!isRecord(x) || typeof x.error !== "string" || !x.error) return null;
+  const taken = Array.isArray(x.taken) ? parseTaken(x.taken) : null;
+  return { error: x.error, taken: taken ?? [] };
 }
 
 /**
