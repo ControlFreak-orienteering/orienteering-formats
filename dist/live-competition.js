@@ -11,6 +11,9 @@
  * link, whether it has an owner on the site, and what it did ({@link LiveCompetitionOutcome}).
  * A competition without an owner may be changed by anyone who sends the same name with starts
  * close by; a signed-in user takes it over on the site. Only the owner changes an owned one.
+ * `publish` (since v0.21.0) asks the site to make the results public or hidden; the answer's
+ * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
+ * is unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
  * The site no longer sends an admin code (since v0.20.0); the code fields stay for v0.19.0
  * readers.
@@ -54,7 +57,7 @@ function courseData(s) {
     return (i >= 0 ? s.slice(i + 1) : s).trim();
 }
 /** The shared rules of the builder and the reader. */
-function normalised(name, courses) {
+function normalised(name, courses, publish) {
     const n = name.trim().slice(0, LIVE_COMPETITION_NAME_MAX).trim();
     if (!n)
         return null;
@@ -66,16 +69,21 @@ function normalised(name, courses) {
     }
     if (seen.size === 0 || seen.size > LIVE_COMPETITION_COURSES_MAX)
         return null;
-    return { v: LIVE_COMPETITION_VERSION, name: n, courses: [...seen] };
+    const request = { v: LIVE_COMPETITION_VERSION, name: n, courses: [...seen] };
+    if (publish !== undefined)
+        request.publish = publish;
+    return request;
 }
 /**
  * Builds a request. Each course may be a whole Run link or only its data: everything up to
  * and including the first `#` is cut, the rest trimmed, empty ones dropped and repeats
  * removed (first kept). A name longer than {@link LIVE_COMPETITION_NAME_MAX} is cut.
  * Returns null for an empty name, no courses, or more than {@link LIVE_COMPETITION_COURSES_MAX}.
+ * `publish` is put in the request only when given: true makes the results public, false hides
+ * them; left out, a new competition is hidden and an existing one is unchanged.
  */
-export function liveCompetitionRequest(name, courses) {
-    return normalised(name, courses);
+export function liveCompetitionRequest(name, courses, publish) {
+    return normalised(name, courses, publish);
 }
 /** Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not one. */
 export function parseLiveCompetitionRequest(x) {
@@ -85,19 +93,23 @@ export function parseLiveCompetitionRequest(x) {
         return null;
     if (!x.courses.every((c) => typeof c === "string"))
         return null;
-    return normalised(x.name, x.courses);
+    if (x.publish !== undefined && typeof x.publish !== "boolean")
+        return null;
+    return normalised(x.name, x.courses, x.publish);
 }
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */
 export function parseLiveCompetitionResponse(x) {
     if (!isRecord(x))
         return null;
-    const { id, url, code, owned, outcome, taken } = x;
+    const { id, url, code, owned, published, outcome, taken } = x;
     if (typeof id !== "string" || !id || typeof url !== "string" || !url)
         return null;
     if (code !== undefined && (typeof code !== "string" || normaliseLiveCompetitionCode(code) !== code)) {
         return null;
     }
     if (owned !== undefined && typeof owned !== "boolean")
+        return null;
+    if (published !== undefined && typeof published !== "boolean")
         return null;
     if (typeof outcome !== "string" || !OUTCOMES.includes(outcome))
         return null;
@@ -111,6 +123,8 @@ export function parseLiveCompetitionResponse(x) {
         response.code = code;
     if (owned !== undefined)
         response.owned = owned;
+    if (published !== undefined)
+        response.published = published;
     return response;
 }
 function parseTaken(taken) {

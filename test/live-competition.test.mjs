@@ -193,3 +193,30 @@ test("key from authorization", () => {
     assert.equal(parseLiveCompetitionKey(bad), null, String(bad));
   }
 });
+
+test("request: publish is set only when given and survives the parser", () => {
+  const base = liveCompetitionRequest("T", ["a"]);
+  assert.equal("publish" in base, false);
+  assert.equal(liveCompetitionRequest("T", ["a"], undefined).publish, undefined);
+  assert.equal("publish" in liveCompetitionRequest("T", ["a"], undefined), false);
+  const on = liveCompetitionRequest("T", ["a"], true);
+  const off = liveCompetitionRequest("T", ["a"], false);
+  assert.deepEqual(on, { v: 1, name: "T", courses: ["a"], publish: true });
+  assert.equal(off.publish, false);
+  assert.deepEqual(parseLiveCompetitionRequest(JSON.parse(JSON.stringify(on))), on);
+  assert.deepEqual(parseLiveCompetitionRequest(JSON.parse(JSON.stringify(off))), off);
+  assert.deepEqual(parseLiveCompetitionRequest(base), base);
+  assert.equal(parseLiveCompetitionRequest({ ...base, publish: "yes" }), null);
+  assert.equal(parseLiveCompetitionRequest({ ...base, publish: 1 }), null);
+  assert.equal(parseLiveCompetitionRequest({ ...base, publish: null }), null);
+});
+
+test("response: published is a boolean or missing", () => {
+  const ok = { id: "i", url: "https://x/y", outcome: "created", taken: [] };
+  assert.equal("published" in parseLiveCompetitionResponse(ok), false);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, published: true }).published, true);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, published: false }).published, false);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, published: "yes" }), null);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, published: 1 }), null);
+  assert.equal(parseLiveCompetitionResponse({ ...ok, published: null }), null);
+});

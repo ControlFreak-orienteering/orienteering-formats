@@ -11,6 +11,9 @@
  * link, whether it has an owner on the site, and what it did ({@link LiveCompetitionOutcome}).
  * A competition without an owner may be changed by anyone who sends the same name with starts
  * close by; a signed-in user takes it over on the site. Only the owner changes an owned one.
+ * `publish` (since v0.21.0) asks the site to make the results public or hidden; the answer's
+ * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
+ * is unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
  * The site no longer sends an admin code (since v0.20.0); the code fields stay for v0.19.0
  * readers.
@@ -52,6 +55,11 @@ export interface LiveCompetitionRequest {
     name: string;
     /** Each course as the data of a Run course link, the text after the `#`. */
     courses: string[];
+    /**
+     * Whether the competition's results are public on the site (since v0.21.0). Absent: a new
+     * competition is made hidden and an existing one keeps its setting.
+     */
+    publish?: boolean;
 }
 /** A course the site left in another competition. */
 export interface LiveCompetitionTaken {
@@ -89,6 +97,11 @@ export interface LiveCompetitionResponse {
      * Missing from older sites.
      */
     owned?: boolean;
+    /**
+     * True when the competition's results are public on the site after the request (since
+     * v0.21.0). Missing from older sites.
+     */
+    published?: boolean;
     /** What the site did. */
     outcome: LiveCompetitionOutcome;
     /** Courses left in other competitions; empty when none. */
@@ -99,8 +112,10 @@ export interface LiveCompetitionResponse {
  * and including the first `#` is cut, the rest trimmed, empty ones dropped and repeats
  * removed (first kept). A name longer than {@link LIVE_COMPETITION_NAME_MAX} is cut.
  * Returns null for an empty name, no courses, or more than {@link LIVE_COMPETITION_COURSES_MAX}.
+ * `publish` is put in the request only when given: true makes the results public, false hides
+ * them; left out, a new competition is hidden and an existing one is unchanged.
  */
-export declare function liveCompetitionRequest(name: string, courses: readonly string[]): LiveCompetitionRequest | null;
+export declare function liveCompetitionRequest(name: string, courses: readonly string[], publish?: boolean): LiveCompetitionRequest | null;
 /** Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not one. */
 export declare function parseLiveCompetitionRequest(x: unknown): LiveCompetitionRequest | null;
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */

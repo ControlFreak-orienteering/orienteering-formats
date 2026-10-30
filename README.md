@@ -199,6 +199,10 @@ ControlFreak Course create or update a competition on ControlFreak Live without 
   left in other competitions (`taken`, each `{ course, competition, owned }`; `owned` since
   v0.20.0). Other answers: `400` bad request, `409` every course taken by other competitions
   (with the same `taken` list since v0.20.0; read it with `parseLiveCompetitionConflict`), or the competition got an owner while the request was running ("owner changed"), `413` body too large, `429` too many new competitions from one address, `500`. CORS as in cf-live.
+- **Publishing** (since v0.21.0): the request may hold `publish: true | false`
+  (`liveCompetitionRequest(name, courses, publish?)`, set only when given), and the answer
+  `published` (boolean, missing from older sites) says whether the results are public. Absent
+  `publish`: a new competition is hidden, an existing one is unchanged.
 - **The client** reads the answer with `parseLiveCompetitionResponse`. v0.19.0 sites also
   sent a 4-character admin `code`; since v0.20.0 the site sends none. `code`,
   `LIVE_COMPETITION_CODE_ALPHABET` and `normaliseLiveCompetitionCode` stay for older readers.
