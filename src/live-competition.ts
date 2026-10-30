@@ -8,11 +8,12 @@
  * competition's name and its courses, each as the data of a Run course link (the text after
  * the `#` of `https://run.controlfreak.se/#<payload>`). The site reads the courses from them.
  * The site answers `200` with a {@link LiveCompetitionResponse}: the competition's id, its
- * link, a short **admin code** and what it did ({@link LiveCompetitionOutcome}). The admin
- * code ({@link normaliseLiveCompetitionCode}) lets the organiser come back and change the
- * competition without an account. A competition with an owner on the site gets no code: only
- * the owner changes it, signed in. Courses that already belong to another competition are
- * left there and listed in `taken`.
+ * link, whether it has an owner on the site, and what it did ({@link LiveCompetitionOutcome}).
+ * A competition without an owner may be changed by anyone who sends the same name with starts
+ * close by; a signed-in user takes it over on the site. Only the owner changes an owned one.
+ * Courses that already belong to another competition are left there and listed in `taken`.
+ * The site no longer sends an admin code (since v0.20.0); the code fields stay for v0.19.0
+ * readers.
  *
  * Other answers: `400` not a request of this protocol, `409` every course is taken by other
  * competitions, or the competition got an owner while the request was running ("owner
@@ -79,9 +80,15 @@ export interface LiveCompetitionResponse {
   /**
    * The admin code, {@link LIVE_COMPETITION_CODE_LENGTH} characters of
    * {@link LIVE_COMPETITION_CODE_ALPHABET}. Missing when the competition has an owner on the
-   * site (since v0.20.0; v0.19.0 required it, but no released app read it).
+   * site (since v0.20.0; v0.19.0 required it, but no released app read it). The site no
+   * longer sends it.
    */
   code?: string;
+  /**
+   * True when the competition has an owner on the site after the request (since v0.20.0).
+   * Missing from older sites.
+   */
+  owned?: boolean;
   /** What the site did. */
   outcome: LiveCompetitionOutcome;
   /** Courses left in other competitions; empty when none. */
@@ -134,11 +141,12 @@ export function parseLiveCompetitionRequest(x: unknown): LiveCompetitionRequest 
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */
 export function parseLiveCompetitionResponse(x: unknown): LiveCompetitionResponse | null {
   if (!isRecord(x)) return null;
-  const { id, url, code, outcome, taken } = x;
+  const { id, url, code, owned, outcome, taken } = x;
   if (typeof id !== "string" || !id || typeof url !== "string" || !url) return null;
   if (code !== undefined && (typeof code !== "string" || normaliseLiveCompetitionCode(code) !== code)) {
     return null;
   }
+  if (owned !== undefined && typeof owned !== "boolean") return null;
   if (typeof outcome !== "string" || !OUTCOMES.includes(outcome)) return null;
   if (!Array.isArray(taken)) return null;
   const list: LiveCompetitionTaken[] = [];
@@ -148,6 +156,7 @@ export function parseLiveCompetitionResponse(x: unknown): LiveCompetitionRespons
   }
   const response: LiveCompetitionResponse = { id, url, outcome: outcome as LiveCompetitionOutcome, taken: list };
   if (code !== undefined) response.code = code;
+  if (owned !== undefined) response.owned = owned;
   return response;
 }
 
