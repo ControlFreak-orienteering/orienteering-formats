@@ -150,7 +150,8 @@ export interface UnsupportedSymbol extends SymbolBase {
 }
 
 /** Any symbol. */
-export type OcadSymbol = PointSymbol | LineSymbol | AreaSymbol | TextSymbol | UnsupportedSymbol;
+export type OcadSymbol =
+  PointSymbol | LineSymbol | AreaSymbol | TextSymbol | UnsupportedSymbol;
 
 /** The kinds of map object. */
 export type ObjectKind = "point" | "line" | "area" | "text";

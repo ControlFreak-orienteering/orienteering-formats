@@ -7,7 +7,13 @@ import { readSymbolElements } from "./elements.js";
  * fields and a reserved 32-bit one, followed by the coordinate pairs.
  */
 function elementBlock(
-  elements: { type: number; color: number; lineWidth: number; diameter: number; points: number }[],
+  elements: {
+    type: number;
+    color: number;
+    lineWidth: number;
+    diameter: number;
+    points: number;
+  }[],
 ) {
   const words = elements.reduce((n, el) => n + 8 + el.points * 4, 0);
   const buf = new ArrayBuffer(words * 2);
@@ -71,12 +77,16 @@ describe("readSymbolElements", () => {
       { type: 7, color: 0, lineWidth: 0, diameter: 0, points: 1 },
       { type: 1, color: 0, lineWidth: 14, diameter: 0, points: 2 },
     ]);
-    readSymbolElements(new BinaryReader(buffer), words, (type) => skipped.push(type));
+    readSymbolElements(new BinaryReader(buffer), words, (type) =>
+      skipped.push(type),
+    );
     expect(skipped).toEqual([7]);
   });
 
   it("stops at the end of the block it was given", () => {
-    const { buffer } = elementBlock([{ type: 1, color: 0, lineWidth: 14, diameter: 0, points: 2 }]);
+    const { buffer } = elementBlock([
+      { type: 1, color: 0, lineWidth: 14, diameter: 0, points: 2 },
+    ]);
     // Half the budget: the record does not fit, and nothing is read outside it.
     expect(readSymbolElements(new BinaryReader(buffer), 0)).toEqual([]);
   });

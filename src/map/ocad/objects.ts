@@ -26,7 +26,10 @@ const KIND_BY_OTP: Record<number, ObjectKind | undefined> = {
  * block" pointer outside the file is treated as "no more blocks" rather
  * than followed.
  */
-export function readObjectIndex(reader: BinaryReader, firstBlockPos: number): ObjectIndexEntry[] {
+export function readObjectIndex(
+  reader: BinaryReader,
+  firstBlockPos: number,
+): ObjectIndexEntry[] {
   const BLOCK_BYTES = 4 + 256 * 40;
   const entries: ObjectIndexEntry[] = [];
   // A corrupt chain can point back at an earlier block (or itself); without
@@ -34,7 +37,11 @@ export function readObjectIndex(reader: BinaryReader, firstBlockPos: number): Ob
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
 
-  while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= reader.length - BLOCK_BYTES &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     reader.push(blockPos);
     const nextBlockPos = reader.integer();

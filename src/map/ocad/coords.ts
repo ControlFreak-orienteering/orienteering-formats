@@ -26,7 +26,10 @@ export function readOcadPoint(reader: BinaryReader): OcadPoint {
 }
 
 /** Reads `count` points in a row, see `readOcadPoint`. */
-export function readOcadPoints(reader: BinaryReader, count: number): OcadPoint[] {
+export function readOcadPoints(
+  reader: BinaryReader,
+  count: number,
+): OcadPoint[] {
   const points = new Array<OcadPoint>(count);
   for (let i = 0; i < count; i++) points[i] = readOcadPoint(reader);
   return points;

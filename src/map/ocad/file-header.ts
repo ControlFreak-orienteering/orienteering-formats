@@ -50,5 +50,11 @@ export function readFileHeader(reader: BinaryReader): FileHeader {
   reader.cardinal(); // reserved
   reader.cardinal(); // multi-representation start block position
 
-  return { version, subVersion, symbolIndexBlockPos, objectIndexBlockPos, stringIndexBlockPos };
+  return {
+    version,
+    subVersion,
+    symbolIndexBlockPos,
+    objectIndexBlockPos,
+    stringIndexBlockPos,
+  };
 }

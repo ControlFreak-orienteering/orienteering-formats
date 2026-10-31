@@ -4,7 +4,10 @@ import { renderOmap } from "./omap.js";
 import { parseOmapModel } from "./omap-model.js";
 
 const parse = (xml: string) =>
-  new DOMParser().parseFromString(xml, "application/xml") as unknown as Document;
+  new DOMParser().parseFromString(
+    xml,
+    "application/xml",
+  ) as unknown as Document;
 
 /** A small map in the format's own shape, as in `omap.test.ts`. */
 function omap(body: {
@@ -27,7 +30,10 @@ ${
 <barrier version="6" required="0.6.0">
 <symbols count="9">${body.symbols}</symbols>
 <parts count="${body.parts.length}" current="0">${body.parts
-    .map((objects, i) => `<part name="del${i}"><objects count="9">${objects}</objects></part>`)
+    .map(
+      (objects, i) =>
+        `<part name="del${i}"><objects count="9">${objects}</objects></part>`,
+    )
     .join("")}</parts>
 </barrier>
 </map>`;
@@ -53,9 +59,16 @@ describe("parseOmapModel", () => {
       { index: 0, name: "Svart", priority: 0 },
       { index: 1, name: "Gul", priority: 1 },
     ]);
-    expect(m.symbols).toMatchObject([{ index: 0, code: "506", name: "Linje 506", kind: "line", hidden: false }]);
+    expect(m.symbols).toMatchObject([
+      { index: 0, code: "506", name: "Linje 506", kind: "line", hidden: false },
+    ]);
     expect(m.objects).toHaveLength(1);
-    expect(m.objects[0]).toMatchObject({ symbolIndex: 0, rotation: 0, text: null, part: 0 });
+    expect(m.objects[0]).toMatchObject({
+      symbolIndex: 0,
+      rotation: 0,
+      text: null,
+      part: 0,
+    });
     expect(m.objects[0]!.points).toEqual([
       { x: 0, y: 0, curveStart: true, closePoint: false, holePoint: false },
       { x: 10, y: 0, curveStart: false, closePoint: false, holePoint: false },
@@ -88,8 +101,12 @@ describe("parseOmapModel", () => {
       `<color priority="${yellowPriority}" name="Gul" c="0" m="0.27" y="0.79" k="0"><rgb method="cmyk" r="1" g="0.8" b="0.2"/></color>`;
     const sym = (inner: number, outer: number) =>
       `<symbol type="1" code="1" name="P"><point_symbol inner_radius="300" inner_color="${inner}" outer_width="100" outer_color="${outer}"/></symbol>`;
-    const a = model(omap({ colors: colors(0, 1), symbols: sym(1, 0), parts: [""] }));
-    const b = model(omap({ colors: colors(1, 0), symbols: sym(0, 1), parts: [""] }));
+    const a = model(
+      omap({ colors: colors(0, 1), symbols: sym(1, 0), parts: [""] }),
+    );
+    const b = model(
+      omap({ colors: colors(1, 0), symbols: sym(0, 1), parts: [""] }),
+    );
     expect(a.symbols[0]!.appearance).toBe(b.symbols[0]!.appearance);
   });
 
@@ -102,7 +119,9 @@ describe("parseOmapModel", () => {
     it("ignores the identity of inline parts", () => {
       const m = model(
         omap({
-          symbols: combined("1", inline("a", "En", 100)) + combined("2", inline("b", "Två", 100)),
+          symbols:
+            combined("1", inline("a", "En", 100)) +
+            combined("2", inline("b", "Två", 100)),
           parts: [""],
         }),
       );
@@ -112,7 +131,9 @@ describe("parseOmapModel", () => {
     it("sees a real look change in a part", () => {
       const m = model(
         omap({
-          symbols: combined("1", inline("a", "En", 100)) + combined("2", inline("a", "En", 150)),
+          symbols:
+            combined("1", inline("a", "En", 100)) +
+            combined("2", inline("a", "En", 150)),
           parts: [""],
         }),
       );
@@ -124,7 +145,13 @@ describe("parseOmapModel", () => {
       const m = model(
         omap({
           // 0 and 1 look alike, 2 does not; 3 and 4 refer to them.
-          symbols: line("1", 100) + line("2", 100) + line("3", 200) + ref(0) + ref(1) + ref(2),
+          symbols:
+            line("1", 100) +
+            line("2", 100) +
+            line("3", 200) +
+            ref(0) +
+            ref(1) +
+            ref(2),
           parts: [""],
         }),
       );
@@ -156,7 +183,12 @@ describe("parseOmapModel", () => {
     const sweref =
       `<projected_crs id="EPSG"><spec language="PROJ.4">+init=epsg:3006</spec>` +
       `<parameter>3006</parameter><ref_point x="610000" y="6799000"/></projected_crs>`;
-    const xml = omap({ symbols: "", parts: [""], scale: 5000, georeferencing: sweref });
+    const xml = omap({
+      symbols: "",
+      parts: [""],
+      scale: 5000,
+      georeferencing: sweref,
+    });
     const m = model(xml);
     expect(m.georeference).not.toBeNull();
     expect(m.georeference).toEqual(renderOmap(parse(xml)).georef);

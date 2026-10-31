@@ -23,7 +23,9 @@ export function readObjectIndex(reader, firstBlockPos) {
     // this guard that would loop forever while `entries` grows without bound.
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= reader.length - BLOCK_BYTES &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         reader.push(blockPos);
         const nextBlockPos = reader.integer();

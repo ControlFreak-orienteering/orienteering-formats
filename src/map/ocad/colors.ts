@@ -10,7 +10,9 @@ const COLOR_RECORD_TYPE = 9;
  * layer, not the bottom. See the sort in render-svg.ts's renderMapSvg for
  * where this is used.
  */
-export function readColors(parameterStrings: Map<number, ParameterString[]>): OcadColor[] {
+export function readColors(
+  parameterStrings: Map<number, ParameterString[]>,
+): OcadColor[] {
   const entries = parameterStrings.get(COLOR_RECORD_TYPE) ?? [];
   return entries.map((entry, order) => {
     const number = Number(entry.fields.get("n") ?? 0);

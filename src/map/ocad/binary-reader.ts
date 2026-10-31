@@ -87,14 +87,16 @@ export class BinaryReader {
   /** Restores the offset saved by the matching push(). */
   pop(): void {
     const restored = this.marks.pop();
-    if (restored === undefined) throw new Error("BinaryReader: pop() without matching push()");
+    if (restored === undefined)
+      throw new Error("BinaryReader: pop() without matching push()");
     this.offset = restored;
   }
 
   /** Bytes consumed since the most recent push(). */
   sinceMark(): number {
     const mark = this.marks[this.marks.length - 1];
-    if (mark === undefined) throw new Error("BinaryReader: sinceMark() without an active push()");
+    if (mark === undefined)
+      throw new Error("BinaryReader: sinceMark() without an active push()");
     return this.offset - mark;
   }
 
@@ -164,7 +166,11 @@ export class BinaryReader {
     const limit = Math.min(this.view.byteLength, start + Math.max(0, maxBytes));
     let end = start;
     while (end < limit && this.view.getUint8(end) !== 0) end++;
-    const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + start, end - start);
+    const bytes = new Uint8Array(
+      this.view.buffer,
+      this.view.byteOffset + start,
+      end - start,
+    );
     this.offset = Math.min(end + 1, this.view.byteLength);
     return new TextDecoder("utf-8").decode(bytes);
   }

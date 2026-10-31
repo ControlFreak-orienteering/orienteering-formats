@@ -70,7 +70,11 @@ function tm(
   centralMeridian: number,
   scaleFactor: number,
   falseEasting: number,
-  options: { falseNorthing?: number; latitudeOfOrigin?: number; ellipsoid?: Ellipsoid } = {},
+  options: {
+    falseNorthing?: number;
+    latitudeOfOrigin?: number;
+    ellipsoid?: Ellipsoid;
+  } = {},
 ): TransverseMercator {
   return {
     centralMeridian,
@@ -89,7 +93,10 @@ function tm(
  * @param south - Whether it is the southern hemisphere.
  * @returns The projection, or `null` for a zone that does not exist.
  */
-export function utmProjection(zone: number, south: boolean): TransverseMercator | null {
+export function utmProjection(
+  zone: number,
+  south: boolean,
+): TransverseMercator | null {
   if (!Number.isInteger(zone) || zone < 1 || zone > 60) return null;
   return tm(6 * zone - 183, 0.9996, 500000, {
     falseNorthing: south ? 10_000_000 : 0,
@@ -135,7 +142,9 @@ export function projectionForEpsg(code: number): TransverseMercator | null {
  * @param gridAndZone - The number from the file.
  * @returns The projection, or `null` for a grid this module does not convert.
  */
-export function projectionForOcadGrid(gridAndZone: number): TransverseMercator | null {
+export function projectionForOcadGrid(
+  gridAndZone: number,
+): TransverseMercator | null {
   if (!Number.isFinite(gridAndZone) || gridAndZone === 0) return null;
   const south = gridAndZone < 0;
   const value = Math.abs(Math.trunc(gridAndZone));
@@ -144,11 +153,13 @@ export function projectionForOcadGrid(gridAndZone: number): TransverseMercator |
 
   if (grid === 2) return utmProjection(zone, south);
   // Sweden: zone 2 is SWEREF 99 TM, zones 3–14 the local zones.
-  if (grid === 13 && zone >= 2 && zone <= 14) return projectionForEpsg(3004 + zone);
+  if (grid === 13 && zone >= 2 && zone <= 14)
+    return projectionForEpsg(3004 + zone);
   // Finland: zone 5 is TM35FIN, zones 19–31 the ETRS-GK zones. The older
   // KKJ zones are on another datum and are left alone.
   if (grid === 6 && zone === 5) return projectionForEpsg(3067);
-  if (grid === 6 && zone >= 19 && zone <= 31) return projectionForEpsg(3107 + zone);
+  if (grid === 6 && zone >= 19 && zone <= 31)
+    return projectionForEpsg(3107 + zone);
   return null;
 }
 
@@ -210,7 +221,11 @@ export function projectionFromProj4(spec: string): TransverseMercator | null {
  * within a millimetre or so in a zone-wide belt: more than enough for a
  * control.
  */
-function project(p: TransverseMercator, latDeg: number, lngDeg: number): [number, number] {
+function project(
+  p: TransverseMercator,
+  latDeg: number,
+  lngDeg: number,
+): [number, number] {
   const { a, f } = p.ellipsoid;
   const e2 = f * (2 - f);
   const n = f / (2 - f);
@@ -229,7 +244,9 @@ function project(p: TransverseMercator, latDeg: number, lngDeg: number): [number
   const phi = latDeg * RAD;
   const dLon = (lngDeg - p.centralMeridian) * RAD;
   const s = Math.sin(phi);
-  const phiStar = phi - Math.sin(phi) * Math.cos(phi) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
+  const phiStar =
+    phi -
+    Math.sin(phi) * Math.cos(phi) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
   const xi = Math.atan(Math.tan(phiStar) / Math.cos(dLon));
   const eta = Math.atanh(Math.cos(phiStar) * Math.sin(dLon));
 
@@ -261,7 +278,11 @@ function project(p: TransverseMercator, latDeg: number, lngDeg: number): [number
  * @param northing - Grid northing in metres.
  * @returns The position in WGS84.
  */
-export function unproject(p: TransverseMercator, easting: number, northing: number): LatLng {
+export function unproject(
+  p: TransverseMercator,
+  easting: number,
+  northing: number,
+): LatLng {
   const { a, f } = p.ellipsoid;
   const e2 = f * (2 - f);
   const n = f / (2 - f);
@@ -278,7 +299,8 @@ export function unproject(p: TransverseMercator, easting: number, northing: numb
           p.centralMeridian,
         )[1];
 
-  const xi = (northing - p.falseNorthing + originNorth) / (p.scaleFactor * aRoof);
+  const xi =
+    (northing - p.falseNorthing + originNorth) / (p.scaleFactor * aRoof);
   const eta = (easting - p.falseEasting) / (p.scaleFactor * aRoof);
 
   const d1 = n / 2 - (2 * n ** 2) / 3 + (37 * n ** 3) / 96 - n ** 4 / 360;
@@ -311,7 +333,10 @@ export function unproject(p: TransverseMercator, easting: number, northing: numb
   const D = -(4279 * e2 ** 4) / 1260;
   const s = Math.sin(phiStar);
   const phi =
-    phiStar + Math.sin(phiStar) * Math.cos(phiStar) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
+    phiStar +
+    Math.sin(phiStar) *
+      Math.cos(phiStar) *
+      (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
 
   return { lat: phi / RAD, lng: p.centralMeridian + dLon / RAD };
 }
@@ -333,7 +358,11 @@ export function unproject(p: TransverseMercator, easting: number, northing: numb
  * @param north - Metres north of the map's own origin, likewise.
  * @returns The position in WGS84.
  */
-export function mapToWgs84(georef: MapGeoreference, east: number, north: number): LatLng {
+export function mapToWgs84(
+  georef: MapGeoreference,
+  east: number,
+  north: number,
+): LatLng {
   // The grivation is the angle from grid north to magnetic north, counted
   // clockwise, and the map is drawn with magnetic north up. Map north thus
   // lies at bearing `grivationDeg`, and map east at bearing
@@ -343,7 +372,11 @@ export function mapToWgs84(georef: MapGeoreference, east: number, north: number)
   const sin = Math.sin(g);
   const gridEast = east * cos + north * sin;
   const gridNorth = -east * sin + north * cos;
-  return unproject(georef.projection, georef.easting + gridEast, georef.northing + gridNorth);
+  return unproject(
+    georef.projection,
+    georef.easting + gridEast,
+    georef.northing + gridNorth,
+  );
 }
 
 /**

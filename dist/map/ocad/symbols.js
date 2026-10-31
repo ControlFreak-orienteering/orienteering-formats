@@ -16,7 +16,9 @@ export function readSymbolIndex(reader, firstBlockPos) {
     // an earlier block (which would otherwise loop forever).
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= reader.length - BLOCK_BYTES &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         reader.push(blockPos);
         const nextBlockPos = reader.integer();
@@ -260,6 +262,10 @@ function readTextSymbol(reader, base) {
         fontSize,
         bold: weight > 400,
         italic,
-        alignmentHorizontal: (alignment & 0x03) === 1 ? "center" : (alignment & 0x03) === 2 ? "right" : "left",
+        alignmentHorizontal: (alignment & 0x03) === 1
+            ? "center"
+            : (alignment & 0x03) === 2
+                ? "right"
+                : "left",
     };
 }

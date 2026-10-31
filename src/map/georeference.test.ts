@@ -27,7 +27,10 @@ const REF = {
 };
 
 /** The distance between two positions in metres, roughly, at that latitude. */
-const metersApart = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+const metersApart = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) =>
   Math.hypot(
     (a.lat - b.lat) * 111132,
     (a.lng - b.lng) * 111320 * Math.cos((b.lat * Math.PI) / 180),
@@ -40,7 +43,11 @@ describe("unproject", () => {
   });
 
   it("undoes what the forward projection gave", () => {
-    for (const p of [SWEREF99TM, utmProjection(33, false)!, projectionForEpsg(3013)!]) {
+    for (const p of [
+      SWEREF99TM,
+      utmProjection(33, false)!,
+      projectionForEpsg(3013)!,
+    ]) {
       for (const point of [
         { lat: 55.6, lng: 13.0 },
         { lat: 61.3, lng: 17.05 },
@@ -78,19 +85,21 @@ describe("which grids can be converted", () => {
   it("refuses grids that would need a datum transformation", () => {
     // RT 90, KKJ, NGO 1948, ED 50, OSGB: coordinates on older datums end up
     // hundreds of metres off if treated as WGS84.
-    for (const grid of [13001, 6002, 12001, 12011, 5000, 8003, 14001, 7001, 0, 1001]) {
+    for (const grid of [
+      13001, 6002, 12001, 12011, 5000, 8003, 14001, 7001, 0, 1001,
+    ]) {
       expect(projectionForOcadGrid(grid)).toBeNull();
     }
   });
 
   it("reads Mapper's PROJ.4 strings", () => {
     expect(projectionFromProj4("+init=epsg:3006")).toEqual(SWEREF99TM);
-    expect(projectionFromProj4("+proj=utm +zone=33 +datum=WGS84 +units=m")).toEqual(
-      utmProjection(33, false),
-    );
-    expect(projectionFromProj4("+proj=utm +zone=56 +south +datum=WGS84")).toEqual(
-      utmProjection(56, true),
-    );
+    expect(
+      projectionFromProj4("+proj=utm +zone=33 +datum=WGS84 +units=m"),
+    ).toEqual(utmProjection(33, false));
+    expect(
+      projectionFromProj4("+proj=utm +zone=56 +south +datum=WGS84"),
+    ).toEqual(utmProjection(56, true));
     // A spelled-out transverse Mercator needs no table at all.
     expect(
       projectionFromProj4(
@@ -101,9 +110,13 @@ describe("which grids can be converted", () => {
 
   it("refuses a PROJ.4 string on another datum or with another projection", () => {
     expect(
-      projectionFromProj4("+proj=tmerc +lon_0=15 +ellps=bessel +towgs84=414,41,603"),
+      projectionFromProj4(
+        "+proj=tmerc +lon_0=15 +ellps=bessel +towgs84=414,41,603",
+      ),
     ).toBeNull();
-    expect(projectionFromProj4("+proj=lcc +lat_1=49 +lon_0=3 +ellps=GRS80")).toBeNull();
+    expect(
+      projectionFromProj4("+proj=lcc +lat_1=49 +lon_0=3 +ellps=GRS80"),
+    ).toBeNull();
   });
 });
 
@@ -131,8 +144,14 @@ describe("mapToWgs84", () => {
    */
   it("rotates the map against the grid", () => {
     const rotated = { ...georef, grivationDeg: 90 };
-    const straightEast = unproject(SWEREF99TM, REF.easting + 1000, REF.northing);
-    expect(metersApart(mapToWgs84(rotated, 0, 1000), straightEast)).toBeLessThan(0.01);
+    const straightEast = unproject(
+      SWEREF99TM,
+      REF.easting + 1000,
+      REF.northing,
+    );
+    expect(
+      metersApart(mapToWgs84(rotated, 0, 1000), straightEast),
+    ).toBeLessThan(0.01);
   });
 });
 
@@ -178,25 +197,35 @@ describe("wgs84ToMap", () => {
     ] as const) {
       const { lat, lng } = mapToWgs84(georef, east, north);
       const back = wgs84ToMap(georef, lat, lng);
-      expect(Math.hypot(back.east - east, back.north - north)).toBeLessThan(0.01);
+      expect(Math.hypot(back.east - east, back.north - north)).toBeLessThan(
+        0.01,
+      );
     }
   });
 });
 
 describe("the datum in a PROJ.4 string", () => {
   it("accepts a missing datum, which PROJ takes as WGS84", () => {
-    expect(projectionFromProj4("+proj=utm +zone=33")).toEqual(utmProjection(33, false));
+    expect(projectionFromProj4("+proj=utm +zone=33")).toEqual(
+      utmProjection(33, false),
+    );
   });
 
   it("refuses UTM on an older datum", () => {
     // ED 50 / UTM 33N: the same grid, but the coordinates lie over a
     // hundred metres from WGS84's.
-    expect(projectionFromProj4("+proj=utm +zone=33 +ellps=intl +towgs84=-87,-98,-121")).toBeNull();
+    expect(
+      projectionFromProj4(
+        "+proj=utm +zone=33 +ellps=intl +towgs84=-87,-98,-121",
+      ),
+    ).toBeNull();
   });
 
   it("accepts a towgs84 of only zeros", () => {
-    expect(projectionFromProj4("+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0")).toEqual(
-      utmProjection(33, false),
-    );
+    expect(
+      projectionFromProj4(
+        "+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0",
+      ),
+    ).toEqual(utmProjection(33, false));
   });
 });

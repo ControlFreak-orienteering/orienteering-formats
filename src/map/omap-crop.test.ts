@@ -4,7 +4,10 @@ import { cropOmapDoc } from "./omap-crop.js";
 import { renderOmap } from "./omap.js";
 
 const parse = (xml: string) =>
-  new DOMParser().parseFromString(xml, "application/xml") as unknown as Document;
+  new DOMParser().parseFromString(
+    xml,
+    "application/xml",
+  ) as unknown as Document;
 
 /** Three boulders and a contour. The rectangle is -1000..1000 both ways (1/1000 mm).
  * The point symbol carries its own `<object>` as a template; it must stay. */

@@ -1,6 +1,12 @@
 import { BinaryReader } from "./binary-reader.js";
 import { readSymbolElements } from "./elements.js";
-import type { AreaSymbol, LineSymbol, OcadSymbol, PointSymbol, TextSymbol } from "./types.js";
+import type {
+  AreaSymbol,
+  LineSymbol,
+  OcadSymbol,
+  PointSymbol,
+  TextSymbol,
+} from "./types.js";
 
 const SYMBOL_TYPE_POINT = 1;
 const SYMBOL_TYPE_LINE = 2;
@@ -17,21 +23,29 @@ interface SymbolIndexEntry {
  * position. Each entry addresses its symbol directly, independent of any
  * other symbol, so symbols never need to be read in file order.
  */
-export function readSymbolIndex(reader: BinaryReader, firstBlockPos: number): SymbolIndexEntry[] {
+export function readSymbolIndex(
+  reader: BinaryReader,
+  firstBlockPos: number,
+): SymbolIndexEntry[] {
   const BLOCK_BYTES = 4 + 256 * 4;
   const entries: SymbolIndexEntry[] = [];
   // Guard against a corrupt chain that points outside the file or back at
   // an earlier block (which would otherwise loop forever).
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
-  while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= reader.length - BLOCK_BYTES &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     reader.push(blockPos);
     const nextBlockPos = reader.integer();
     const positions: number[] = [];
     for (let i = 0; i < 256; i++) positions.push(reader.integer());
     reader.pop();
-    for (const pos of positions) if (pos > 0 && pos < reader.length) entries.push({ filePos: pos });
+    for (const pos of positions)
+      if (pos > 0 && pos < reader.length) entries.push({ filePos: pos });
     blockPos = nextBlockPos;
   }
   return entries;
@@ -94,7 +108,9 @@ export function readSymbol(
     const number = `${Math.floor(symNum / 1000)}.${symNum % 1000}`;
     const base = { symNum, number, description, hidden };
     const onUnknown = (type: number) =>
-      warn(`Symbol ${number}: skipped an unknown drawing primitive (type ${type}).`);
+      warn(
+        `Symbol ${number}: skipped an unknown drawing primitive (type ${type}).`,
+      );
 
     switch (otp) {
       case SYMBOL_TYPE_POINT:
@@ -113,7 +129,12 @@ export function readSymbol(
   }
 }
 
-type SymbolBaseFields = { symNum: number; number: string; description: string; hidden: boolean };
+type SymbolBaseFields = {
+  symNum: number;
+  number: string;
+  description: string;
+  hidden: boolean;
+};
 
 function readPointSymbol(
   reader: BinaryReader,
@@ -210,7 +231,11 @@ function readLineSymbol(
   };
 }
 
-function readAreaSymbol(reader: BinaryReader, base: SymbolBaseFields, version: number): AreaSymbol {
+function readAreaSymbol(
+  reader: BinaryReader,
+  base: SymbolBaseFields,
+  version: number,
+): AreaSymbol {
   const borderSymbolNumber = reader.integer();
   const fillColor = reader.smallInt();
   const hatchMode = reader.smallInt();
@@ -274,7 +299,10 @@ function readAreaSymbol(reader: BinaryReader, base: SymbolBaseFields, version: n
   };
 }
 
-function readTextSymbol(reader: BinaryReader, base: SymbolBaseFields): TextSymbol {
+function readTextSymbol(
+  reader: BinaryReader,
+  base: SymbolBaseFields,
+): TextSymbol {
   const fontName = reader.pascalString(32);
   const fontColor = reader.smallInt();
   const fontSize = reader.smallInt();
@@ -297,6 +325,10 @@ function readTextSymbol(reader: BinaryReader, base: SymbolBaseFields): TextSymbo
     bold: weight > 400,
     italic,
     alignmentHorizontal:
-      (alignment & 0x03) === 1 ? "center" : (alignment & 0x03) === 2 ? "right" : "left",
+      (alignment & 0x03) === 1
+        ? "center"
+        : (alignment & 0x03) === 2
+          ? "right"
+          : "left",
   };
 }

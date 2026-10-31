@@ -287,7 +287,11 @@ function placesAlong(line, distances) {
         const b = pts[i + 1];
         const piece = Math.hypot(b.x - a.x, b.y - a.y);
         const t = piece > 0 ? Math.min(1, Math.max(0, (s - walked) / piece)) : 0;
-        places.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle: heading(a, b) });
+        places.push({
+            x: a.x + (b.x - a.x) * t,
+            y: a.y + (b.y - a.y) * t,
+            angle: heading(a, b),
+        });
     }
     return places;
 }
@@ -333,7 +337,11 @@ function renderLineDecorations(obj, symbol, decorations, map, ops) {
                 if (el.lineWidth <= 0)
                     continue;
                 const key = `${el.color}|${el.lineWidth}`;
-                const entry = strokes.get(key) ?? { color: el.color, width: el.lineWidth, d: [] };
+                const entry = strokes.get(key) ?? {
+                    color: el.color,
+                    width: el.lineWidth,
+                    d: [],
+                };
                 entry.d.push(pathData(points, false));
                 strokes.set(key, entry);
             }
@@ -343,7 +351,10 @@ function renderLineDecorations(obj, symbol, decorations, map, ops) {
                 fills.set(el.color, list);
             }
             else {
-                dots.push({ color: el.color, markup: renderElement({ ...el, points }, (p) => p, map) });
+                dots.push({
+                    color: el.color,
+                    markup: renderElement({ ...el, points }, (p) => p, map),
+                });
             }
         }
     };
@@ -392,7 +403,10 @@ function renderLineDecorations(obj, symbol, decorations, map, ops) {
             const last = pts.length - 1;
             const before = nextDistinct(pts, last, -1);
             if (before)
-                draw(decorations.end, { ...pts[last], angle: heading(before, pts[last]) });
+                draw(decorations.end, {
+                    ...pts[last],
+                    angle: heading(before, pts[last]),
+                });
         }
     }
     for (const s of strokes.values()) {
@@ -509,7 +523,10 @@ function renderAreaObject(obj, symbol, map, ops) {
         // small repeated icons (dots, rocks, ...) that are meant to sit on
         // top of the plainer colors under them.
         const structureOrder = Math.min(...symbol.elements.map((el) => colorOrder(map, el.color)), Number.MAX_SAFE_INTEGER);
-        ops.push({ order: structureOrder, markup: fillPath(d, `url(#struct-${symbol.symNum})`) });
+        ops.push({
+            order: structureOrder,
+            markup: fillPath(d, `url(#struct-${symbol.symNum})`),
+        });
     }
     if (symbol.borderSymbolNumber) {
         const borderSymbol = map.symbolsByNumber.get(symbol.borderSymbolNumber);

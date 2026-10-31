@@ -131,14 +131,19 @@ export function readMapFile(
  *
  * @param drawing - A drawing from `readMapFile`.
  */
-export function mapSvgMarkup(drawing: Pick<MapDrawing, "innerMarkup" | "viewBox">): string {
+export function mapSvgMarkup(
+  drawing: Pick<MapDrawing, "innerMarkup" | "viewBox">,
+): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${drawing.viewBox}">${drawing.innerMarkup}</svg>`;
 }
 
 /** The bytes as an ArrayBuffer of their own (a Uint8Array may view part of a larger one). */
 function toArrayBuffer(bytes: ArrayBuffer | Uint8Array): ArrayBuffer {
   if (bytes instanceof ArrayBuffer) return bytes;
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
 }
 
 function readOcad(buffer: ArrayBuffer): MapDrawing {
@@ -148,7 +153,8 @@ function readOcad(buffer: ArrayBuffer): MapDrawing {
   } catch (e) {
     const message = e instanceof Error ? e.message : "";
     if (message.includes("Not an OCAD file")) throw new MapError("not-ocad");
-    if (message.includes("not supported yet")) throw new MapError("ocad-version");
+    if (message.includes("not supported yet"))
+      throw new MapError("ocad-version");
     throw new MapError("ocad-unreadable");
   }
 
@@ -176,7 +182,9 @@ function readOcad(buffer: ArrayBuffer): MapDrawing {
  * in a grid this package does not convert (see `projectionForOcadGrid`). Both give
  * `null`.
  */
-function ocadGeoreference(georef: ParsedOcadMap["georef"]): MapGeoreference | null {
+function ocadGeoreference(
+  georef: ParsedOcadMap["georef"],
+): MapGeoreference | null {
   if (!georef || !georef.realWorldCoords) return null;
   const projection = projectionForOcadGrid(georef.gridAndZone);
   if (!projection) return null;
@@ -194,10 +202,12 @@ function readOmap(buffer: ArrayBuffer, options: ReadMapOptions): MapDrawing {
     const xml = new TextDecoder().decode(buffer);
     const parse =
       options.parseXml ??
-      ((text: string) => new DOMParser().parseFromString(text, "application/xml"));
+      ((text: string) =>
+        new DOMParser().parseFromString(text, "application/xml"));
     doc = parse(xml);
     // Browsers report bad XML as a document with a <parsererror> element.
-    if (doc.getElementsByTagName("parsererror").length > 0) throw new Error("bad XML");
+    if (doc.getElementsByTagName("parsererror").length > 0)
+      throw new Error("bad XML");
   } catch {
     throw new MapError("omap-unreadable");
   }

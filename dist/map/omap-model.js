@@ -40,7 +40,9 @@ function canonical(el, r) {
     const isSymbol = el.localName === "symbol";
     const attrs = {};
     const names = Array.from(el.attributes, (a) => a.name).sort();
-    const reference = el.localName === "part" && !childByTag(el, "symbol") && el.hasAttribute("symbol");
+    const reference = el.localName === "part" &&
+        !childByTag(el, "symbol") &&
+        el.hasAttribute("symbol");
     for (const name of names) {
         if (isSymbol && IDENTITY_ATTRIBUTES.has(name))
             continue;
@@ -76,7 +78,12 @@ function canonical(el, r) {
  */
 export function parseOmapModel(doc) {
     const colorTable = parseColors(doc);
-    const colors = [...colorTable.values()].map((c) => ({ index: c.order, name: c.name, rgb: c.rgb, priority: c.order }));
+    const colors = [...colorTable.values()].map((c) => ({
+        index: c.order,
+        name: c.name,
+        rgb: c.rgb,
+        priority: c.order,
+    }));
     const symbolEls = findByTag(doc, "symbols").flatMap((el) => childrenByTag(el, "symbol"));
     const active = new Set();
     const resolver = {

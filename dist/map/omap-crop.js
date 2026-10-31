@@ -30,7 +30,10 @@ export function cropOmapDoc(doc, keep) {
                     maxY = p.y;
             }
             const inside = points.length === 0 ||
-                (maxX >= keep.minX && minX <= keep.maxX && maxY >= keep.minY && minY <= keep.maxY);
+                (maxX >= keep.minX &&
+                    minX <= keep.maxX &&
+                    maxY >= keep.minY &&
+                    minY <= keep.maxY);
             if (inside)
                 kept++;
             else
@@ -59,5 +62,7 @@ export function cropOmapXml(xml, keep) {
     // The serializer leaves out the XML declaration. Mapper manages without
     // it, but the file should look as it did.
     const declaration = /^\s*<\?xml[^>]*\?>/.exec(xml)?.[0];
-    return declaration && !body.startsWith("<?xml") ? `${declaration}\n${body}` : body;
+    return declaration && !body.startsWith("<?xml")
+        ? `${declaration}\n${body}`
+        : body;
 }
