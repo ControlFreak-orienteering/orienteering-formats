@@ -14,6 +14,10 @@
  * `publish` (since v0.20.0) asks the site to make the results public or hidden; the answer's
  * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
  * is unchanged.
+ * `organiser` and `date` (since v0.22.0) give the organising club and the competition's
+ * first day (`YYYY-MM-DD`). The site sets the organiser on a new competition and on an
+ * existing one when given, and the date on a new competition and on one without a date (a
+ * date set at the first start or by the owner stays). Absent: unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
  * The site no longer sends an admin code (since v0.20.0); the code fields stay for v0.19.0
  * readers.
@@ -41,6 +45,8 @@ export declare const LIVE_COMPETITION_VERSION = 1;
 export declare const LIVE_COMPETITION_PATH = "/api/public/cf-competition";
 /** The longest competition name, in characters. */
 export declare const LIVE_COMPETITION_NAME_MAX = 120;
+/** The longest organiser, in characters. */
+export declare const LIVE_COMPETITION_ORGANISER_MAX = 120;
 /** Most courses a request may hold. */
 export declare const LIVE_COMPETITION_COURSES_MAX = 100;
 /** The characters of an admin code: capitals and digits without I, L, O, 0 and 1. */
@@ -60,6 +66,23 @@ export interface LiveCompetitionRequest {
      * competition is made hidden and an existing one keeps its setting.
      */
     publish?: boolean;
+    /**
+     * The organising club (since v0.22.0), 1 to {@link LIVE_COMPETITION_ORGANISER_MAX}
+     * characters. Absent: a new competition has none and an existing one keeps its own.
+     */
+    organiser?: string;
+    /**
+     * The competition's first day, `YYYY-MM-DD` (since v0.22.0). The site keeps a date it
+     * already has. Absent: unchanged.
+     */
+    date?: string;
+}
+/** What a request may say about the competition besides its name and courses (since v0.22.0). */
+export interface LiveCompetitionDetails {
+    /** The organising club; cut to {@link LIVE_COMPETITION_ORGANISER_MAX}, dropped when empty. */
+    organiser?: string;
+    /** The first day, `YYYY-MM-DD`; dropped when it is not a real day. */
+    date?: string;
 }
 /** A course the site left in another competition. */
 export interface LiveCompetitionTaken {
@@ -114,9 +137,13 @@ export interface LiveCompetitionResponse {
  * Returns null for an empty name, no courses, or more than {@link LIVE_COMPETITION_COURSES_MAX}.
  * `publish` is put in the request only when given: true makes the results public, false hides
  * them; left out, a new competition is hidden and an existing one is unchanged.
+ * `details` (since v0.22.0) adds the organiser and the date when they are usable.
  */
-export declare function liveCompetitionRequest(name: string, courses: readonly string[], publish?: boolean): LiveCompetitionRequest | null;
-/** Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not one. */
+export declare function liveCompetitionRequest(name: string, courses: readonly string[], publish?: boolean, details?: LiveCompetitionDetails): LiveCompetitionRequest | null;
+/**
+ * Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not
+ * one. An `organiser` or `date` that is not usable is dropped, not refused.
+ */
 export declare function parseLiveCompetitionRequest(x: unknown): LiveCompetitionRequest | null;
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */
 export declare function parseLiveCompetitionResponse(x: unknown): LiveCompetitionResponse | null;

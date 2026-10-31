@@ -208,6 +208,11 @@ ControlFreak Course create or update a competition on ControlFreak Live without 
 - **The client** reads the answer with `parseLiveCompetitionResponse`. v0.19.0 sites also
   sent a 4-character admin `code`; since v0.20.0 the site sends none. `code`,
   `LIVE_COMPETITION_CODE_ALPHABET` and `normaliseLiveCompetitionCode` stay for older readers.
+- **Organiser and date** (since v0.22.0): the request may hold `organiser` (the organising
+  club, 1–120 characters) and `date` (the first day, `YYYY-MM-DD`). The site sets the organiser
+  on a new competition and on an existing one when given, and the date on a new competition
+  and on one without a date. A value that is not usable is dropped, not refused; absent means
+  unchanged. Build with `liveCompetitionRequest(name, courses, publish, { organiser, date })`.
 - **Linking an app to a Live account** (since v0.20.0): the app opens
   `liveLinkUrl(origin, app, returnOrigin)`, `{origin}/koppla?app=<run|course>&origin=<returnOrigin>`
   (`LIVE_LINK_PATH`). After sign-in the page posts a `LiveLinkMessage`

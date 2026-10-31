@@ -14,6 +14,10 @@
  * `publish` (since v0.20.0) asks the site to make the results public or hidden; the answer's
  * `published` says which it is. Absent `publish`: a new competition is hidden, an existing one
  * is unchanged.
+ * `organiser` and `date` (since v0.22.0) give the organising club and the competition's
+ * first day (`YYYY-MM-DD`). The site sets the organiser on a new competition and on an
+ * existing one when given, and the date on a new competition and on one without a date (a
+ * date set at the first start or by the owner stays). Absent: unchanged.
  * Courses that already belong to another competition are left there and listed in `taken`.
  * The site no longer sends an admin code (since v0.20.0); the code fields stay for v0.19.0
  * readers.
@@ -41,6 +45,8 @@ export const LIVE_COMPETITION_VERSION = 1;
 export const LIVE_COMPETITION_PATH = "/api/public/cf-competition";
 /** The longest competition name, in characters. */
 export const LIVE_COMPETITION_NAME_MAX = 120;
+/** The longest organiser, in characters. */
+export const LIVE_COMPETITION_ORGANISER_MAX = 120;
 /** Most courses a request may hold. */
 export const LIVE_COMPETITION_COURSES_MAX = 100;
 /** The characters of an admin code: capitals and digits without I, L, O, 0 and 1. */
@@ -56,8 +62,16 @@ function courseData(s) {
     const i = s.indexOf("#");
     return (i >= 0 ? s.slice(i + 1) : s).trim();
 }
+/** True for `YYYY-MM-DD` that is a day in the calendar. */
+function isDay(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m)
+        return false;
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    return d.toISOString().slice(0, 10) === s;
+}
 /** The shared rules of the builder and the reader. */
-function normalised(name, courses, publish) {
+function normalised(name, courses, publish, details = {}) {
     const n = name.trim().slice(0, LIVE_COMPETITION_NAME_MAX).trim();
     if (!n)
         return null;
@@ -72,6 +86,12 @@ function normalised(name, courses, publish) {
     const request = { v: LIVE_COMPETITION_VERSION, name: n, courses: [...seen] };
     if (publish !== undefined)
         request.publish = publish;
+    const organiser = details.organiser?.trim().slice(0, LIVE_COMPETITION_ORGANISER_MAX).trim();
+    if (organiser)
+        request.organiser = organiser;
+    const date = details.date?.trim();
+    if (date && isDay(date))
+        request.date = date;
     return request;
 }
 /**
@@ -81,11 +101,15 @@ function normalised(name, courses, publish) {
  * Returns null for an empty name, no courses, or more than {@link LIVE_COMPETITION_COURSES_MAX}.
  * `publish` is put in the request only when given: true makes the results public, false hides
  * them; left out, a new competition is hidden and an existing one is unchanged.
+ * `details` (since v0.22.0) adds the organiser and the date when they are usable.
  */
-export function liveCompetitionRequest(name, courses, publish) {
-    return normalised(name, courses, publish);
+export function liveCompetitionRequest(name, courses, publish, details) {
+    return normalised(name, courses, publish, details);
 }
-/** Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not one. */
+/**
+ * Reads a request body with the same rules as {@link liveCompetitionRequest}; null if it is not
+ * one. An `organiser` or `date` that is not usable is dropped, not refused.
+ */
 export function parseLiveCompetitionRequest(x) {
     if (!isRecord(x) || x.v !== LIVE_COMPETITION_VERSION)
         return null;
@@ -95,7 +119,10 @@ export function parseLiveCompetitionRequest(x) {
         return null;
     if (x.publish !== undefined && typeof x.publish !== "boolean")
         return null;
-    return normalised(x.name, x.courses, x.publish);
+    return normalised(x.name, x.courses, x.publish, {
+        ...(typeof x.organiser === "string" ? { organiser: x.organiser } : {}),
+        ...(typeof x.date === "string" ? { date: x.date } : {}),
+    });
 }
 /** Reads the site's answer; null if it is not one. Unknown fields are dropped. */
 export function parseLiveCompetitionResponse(x) {

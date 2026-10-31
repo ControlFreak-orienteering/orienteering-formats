@@ -220,3 +220,19 @@ test("response: published is a boolean or missing", () => {
   assert.equal(parseLiveCompetitionResponse({ ...ok, published: 1 }), null);
   assert.equal(parseLiveCompetitionResponse({ ...ok, published: null }), null);
 });
+
+test("request: organiser and date are set only when usable and survive the parser", () => {
+  const base = liveCompetitionRequest("T", ["a"]);
+  assert.equal("organiser" in base, false);
+  assert.equal("date" in base, false);
+  const full = liveCompetitionRequest("T", ["a"], true, { organiser: "  Söderhamns OK ", date: "2026-10-29" });
+  assert.deepEqual(full, { v: 1, name: "T", courses: ["a"], publish: true, organiser: "Söderhamns OK", date: "2026-10-29" });
+  assert.deepEqual(parseLiveCompetitionRequest(JSON.parse(JSON.stringify(full))), full);
+  assert.equal(liveCompetitionRequest("T", ["a"], undefined, { organiser: "x".repeat(200) }).organiser.length, 120);
+  assert.equal("organiser" in liveCompetitionRequest("T", ["a"], undefined, { organiser: "  " }), false);
+  for (const date of ["2026-02-30", "2026-13-01", "29/10", "2026-1-5", ""]) {
+    assert.equal("date" in liveCompetitionRequest("T", ["a"], undefined, { date }), false, date);
+  }
+  // Ett oanvändbart fält släpps; begäran godtas ändå.
+  assert.deepEqual(parseLiveCompetitionRequest({ ...base, organiser: 5, date: "igår" }), base);
+});
