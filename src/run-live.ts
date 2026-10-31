@@ -16,8 +16,8 @@
  *   `orienteering-formats/run`), so two links of the same course meet on the same page.
  *
  * The body holds the name the runner gave, the course's name and control codes, the start,
- * every punch and the finish, and optionally the runner's club (`club`) and the course link
- * (`courseLink`). Never the track
+ * every punch and the finish, and optionally the runner's club (`club`), the course link
+ * (`courseLink`) and what the run was made with (`device`). Never the track
  * or any position.
  *
  * The phone sends the whole run each time, so a lost upload is mended by the next:
@@ -30,7 +30,7 @@
  *   readable `courseLink`), `401` wrong key, `403` wrong secret, `404` no such competition,
  *   `413` too large. CORS as in cf-live.
  *
- * `club`, `courseLink` and `startedAt` are optional fields within version 1: a body without
+ * `club`, `courseLink`, `startedAt` and `device` are optional fields within version 1: a body without
  * them is as valid as before, and a site that does not know them drops them.
  *
  * This module imports nothing, like `cf-live`. The id of a course's page needs the
@@ -48,6 +48,9 @@ export const RUN_LIVE_NAME_MAX = 60;
 
 /** The longest club a runner may give, in characters. */
 export const RUN_LIVE_CLUB_MAX = 60;
+
+/** The longest `device` a sender may give, in characters. */
+export const RUN_LIVE_DEVICE_MAX = 60;
 
 /** Most controls a course may hold, as in the course link. */
 const MAX_CONTROLS = 1000;
@@ -116,6 +119,13 @@ export interface RunLiveBody {
    * address, optional in a competition. Optional field within version 1.
    */
   courseLink?: string;
+  /**
+   * What the run was made with, for the developers: the watch's part number
+   * ("Garmin 006-B3113-00") or a short description of the phone ("Android 15 · SM-S911B",
+   * "iPhone · iOS 18.1"). At most {@link RUN_LIVE_DEVICE_MAX} characters. Optional field
+   * within version 1 (since v0.21.0); not in the standings.
+   */
+  device?: string;
 }
 
 /** What the runner link carries. */
@@ -196,7 +206,8 @@ const isTime = (x: unknown): x is number => typeof x === "number" && Number.isFi
  * characters and at most {@link RUN_LIVE_COURSE_LINK_MAX} of them, and dropped otherwise, so
  * it never costs the punches. Its course is not read here; the keyless address must still read
  * it (`openCourseId`). The optional `startedAt` is kept when it is null or a time, and dropped
- * otherwise.
+ * otherwise. The optional `device` is kept trimmed when it is a string of 1 to
+ * {@link RUN_LIVE_DEVICE_MAX} characters, and dropped otherwise.
  */
 export function parseRunLiveBody(json: unknown): RunLiveBody | null {
   if (typeof json !== "object" || json === null || Array.isArray(json)) return null;
@@ -237,6 +248,7 @@ export function parseRunLiveBody(json: unknown): RunLiveBody | null {
   }
   if (b.finishAt !== null && !isTime(b.finishAt)) return null;
   const club = typeof b.club === "string" ? b.club.trim() : "";
+  const device = typeof b.device === "string" ? b.device.trim() : "";
   const courseLink = checkCourseLink(b.courseLink);
   const body: RunLiveBody = {
     protocol: RUN_LIVE_PROTOCOL,
@@ -253,6 +265,7 @@ export function parseRunLiveBody(json: unknown): RunLiveBody | null {
   if (club && club.length <= RUN_LIVE_CLUB_MAX) body.club = club;
   if (courseLink) body.courseLink = courseLink;
   if (b.startedAt === null || isTime(b.startedAt)) body.startedAt = b.startedAt;
+  if (device && device.length <= RUN_LIVE_DEVICE_MAX) body.device = device;
   return body;
 }
 

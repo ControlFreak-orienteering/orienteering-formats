@@ -16,8 +16,8 @@
  *   `orienteering-formats/run`), so two links of the same course meet on the same page.
  *
  * The body holds the name the runner gave, the course's name and control codes, the start,
- * every punch and the finish, and optionally the runner's club (`club`) and the course link
- * (`courseLink`). Never the track
+ * every punch and the finish, and optionally the runner's club (`club`), the course link
+ * (`courseLink`) and what the run was made with (`device`). Never the track
  * or any position.
  *
  * The phone sends the whole run each time, so a lost upload is mended by the next:
@@ -30,7 +30,7 @@
  *   readable `courseLink`), `401` wrong key, `403` wrong secret, `404` no such competition,
  *   `413` too large. CORS as in cf-live.
  *
- * `club`, `courseLink` and `startedAt` are optional fields within version 1: a body without
+ * `club`, `courseLink`, `startedAt` and `device` are optional fields within version 1: a body without
  * them is as valid as before, and a site that does not know them drops them.
  *
  * This module imports nothing, like `cf-live`. The id of a course's page needs the
@@ -44,6 +44,8 @@ export declare const RUN_LIVE_VERSION = 1;
 export declare const RUN_LIVE_NAME_MAX = 60;
 /** The longest club a runner may give, in characters. */
 export declare const RUN_LIVE_CLUB_MAX = 60;
+/** The longest `device` a sender may give, in characters. */
+export declare const RUN_LIVE_DEVICE_MAX = 60;
 /**
  * Path of the keyless address on a ControlFreak Live site, for runs on any course without a
  * competition: the phone sends to `{origin}/api/public/cf-run/open/runners/{runnerId}`.
@@ -106,6 +108,13 @@ export interface RunLiveBody {
      * address, optional in a competition. Optional field within version 1.
      */
     courseLink?: string;
+    /**
+     * What the run was made with, for the developers: the watch's part number
+     * ("Garmin 006-B3113-00") or a short description of the phone ("Android 15 · SM-S911B",
+     * "iPhone · iOS 18.1"). At most {@link RUN_LIVE_DEVICE_MAX} characters. Optional field
+     * within version 1 (since v0.21.0); not in the standings.
+     */
+    device?: string;
 }
 /** What the runner link carries. */
 export interface RunLiveLink {
@@ -145,7 +154,8 @@ export declare function newRunnerId(): {
  * characters and at most {@link RUN_LIVE_COURSE_LINK_MAX} of them, and dropped otherwise, so
  * it never costs the punches. Its course is not read here; the keyless address must still read
  * it (`openCourseId`). The optional `startedAt` is kept when it is null or a time, and dropped
- * otherwise.
+ * otherwise. The optional `device` is kept trimmed when it is a string of 1 to
+ * {@link RUN_LIVE_DEVICE_MAX} characters, and dropped otherwise.
  */
 export declare function parseRunLiveBody(json: unknown): RunLiveBody | null;
 /** A runner's row in the standings. Times are ms since the runner's start. */

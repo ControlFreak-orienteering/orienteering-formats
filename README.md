@@ -159,10 +159,12 @@ any course, to the course's page on the site, without a competition.
 - **The phone** reads the link (`parseRunLiveLink`), makes an id and a secret for the run
   (`newRunnerId`) and sends the whole run each time with `PUT {base}/runners/{runnerId}`
   (`runLiveRunnerUrl`): the runner's name, the course's name and control codes, the start,
-  the punches and the finish, and optionally the runner's club and the course link. Never the track or any
+  the punches and the finish, and optionally the runner's club, the course link and what the run
+  was made with (`device`: the watch's part number or a short phone description, since v0.21.0;
+  for the developers, not in the standings). Never the track or any
   position. The secret keeps one runner from overwriting another, on the keyless address too.
-- **The site** checks each upload (`parseRunLiveBody`, which keeps `club` (at most 60
-  characters) and `courseLink` within limits and drops them otherwise, and drops unknown
+- **The site** checks each upload (`parseRunLiveBody`, which keeps `club` and `device` (at most 60
+  characters each) and `courseLink` within limits and drops them otherwise, and drops unknown
   fields), refuses another secret for a runner it already
   holds, and ranks the runners per course (`runLiveStandings`, each row with the runner's `club` or null).
   On a fixed-order course each control takes the first punch at it after the control before,
@@ -176,7 +178,7 @@ any course, to the course's page on the site, without a competition.
   `orienteering-formats/run`, since it reads the course link.
 
 **Compatibility:** runner links are printed, so `parseRunLiveLink` must keep reading every
-link ever made. Within version 1, fields are only added (`club` and `courseLink` are such fields); a change an older site would misread is a new version. Course ids name pages
+link ever made. Within version 1, fields are only added (`club`, `courseLink` and `device` are such fields); a change an older site would misread is a new version. Course ids name pages
 people link to, so `openCourseKey` and the hash never change (pinned in
 `test/run-frozen.test.mjs`).
 

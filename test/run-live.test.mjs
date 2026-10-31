@@ -182,6 +182,18 @@ test("an upload keeps a club within the limit and drops it otherwise; standings 
   );
 });
 
+test("an upload keeps a device within the limit and drops it otherwise", () => {
+  const b = body("Anna", []);
+  assert.equal(parseRunLiveBody({ ...b, device: " Garmin 006-B3113-00 " }).device, "Garmin 006-B3113-00");
+  assert.equal(parseRunLiveBody({ ...b, device: "x".repeat(60) }).device.length, 60);
+  for (const device of ["", "   ", "x".repeat(61), 42, null]) {
+    const p = parseRunLiveBody({ ...b, device });
+    assert.notEqual(p, null, "the run itself is kept");
+    assert.equal("device" in p, false);
+  }
+  assert.equal("device" in parseRunLiveBody(b), false);
+});
+
 test("an upload keeps startedAt when null or a time, and drops it otherwise", () => {
   assert.equal(parseRunLiveBody(body("A", [])).startedAt, undefined);
   assert.equal(parseRunLiveBody(body("A", [], null, { startedAt: null })).startedAt, null);
