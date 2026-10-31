@@ -91,7 +91,13 @@ export function readColorsV8(reader) {
             const [r, g, b] = cmykToRgb(cmyk);
             // The same order convention as newer files: the first defined
             // colour is the one printed last, that is, on top.
-            colors.push({ number, name, cmyk, rgb: `rgb(${r}, ${g}, ${b})`, order: i });
+            colors.push({
+                number,
+                name,
+                cmyk,
+                rgb: `rgb(${r}, ${g}, ${b})`,
+                order: i,
+            });
         }
         finally {
             reader.pop();
@@ -105,7 +111,9 @@ function symbolPositions(reader, firstBlockPos) {
     const positions = [];
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= reader.length - BLOCK_BYTES &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         reader.push(blockPos);
         const next = reader.integer();
@@ -166,7 +174,11 @@ function readSymbolV8(reader, filePos) {
 function readPointSymbolV8(reader, base) {
     const dataSize = reader.word();
     reader.word(); // reserverat
-    return { kind: "point", ...base, elements: readSymbolElements(reader, dataSize) };
+    return {
+        kind: "point",
+        ...base,
+        elements: readSymbolElements(reader, dataSize),
+    };
 }
 /** The line symbol's body is unchanged since OCAD 8: the same fields in the
  * same order as symbols.ts reads for newer files. */
@@ -279,7 +291,14 @@ function readAreaSymbolV8(reader, base) {
         borderSymbolNumber: 0,
         elements,
         ...(structureMode > 0
-            ? { structure: { mode: structureMode, cellWidth, cellHeight, angleDeg: structureAngleDeg } }
+            ? {
+                structure: {
+                    mode: structureMode,
+                    cellWidth,
+                    cellHeight,
+                    angleDeg: structureAngleDeg,
+                },
+            }
             : {}),
     };
 }
@@ -301,7 +320,11 @@ function readTextSymbolV8(reader, base) {
         fontSize,
         bold: weight > 400,
         italic,
-        alignmentHorizontal: (alignment & 0x03) === 1 ? "center" : (alignment & 0x03) === 2 ? "right" : "left",
+        alignmentHorizontal: (alignment & 0x03) === 1
+            ? "center"
+            : (alignment & 0x03) === 2
+                ? "right"
+                : "left",
     };
 }
 /** Object index: 24 bytes per entry, and no status field; an empty slot is
@@ -311,7 +334,9 @@ function objectPositions(reader, firstBlockPos) {
     const positions = [];
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= reader.length - BLOCK_BYTES &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         reader.push(blockPos);
         const next = reader.integer();

@@ -106,7 +106,12 @@ export function parseColors(doc) {
     table.forEach((el, index) => {
         const declared = num(el, "priority", Number.NaN);
         const order = Number.isFinite(declared) ? declared : index;
-        colors.set(order, { name: el.getAttribute("name") ?? "", rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
+        colors.set(order, {
+            name: el.getAttribute("name") ?? "",
+            rgb: colorRgb(el),
+            opacity: num(el, "opacity", 1),
+            order,
+        });
     });
     return colors;
 }
@@ -118,7 +123,9 @@ export function parseCoords(el) {
     const pts = [];
     for (const part of text.split(";")) {
         const nums = part.trim().split(/\s+/).map(Number);
-        if (nums.length < 2 || !Number.isFinite(nums[0]) || !Number.isFinite(nums[1]))
+        if (nums.length < 2 ||
+            !Number.isFinite(nums[0]) ||
+            !Number.isFinite(nums[1]))
             continue;
         const flags = nums[2] ?? 0;
         pts.push({
@@ -147,7 +154,18 @@ function parseLine(el) {
             width: num(b, "width"),
             shift: num(b, "shift"),
         }))),
+        ...endSymbol(el, "start_symbol", "startSymbol"),
+        ...endSymbol(el, "end_symbol", "endSymbol"),
     };
+}
+/** A line's start or end symbol (`<start_symbol>`, `<end_symbol>`), when it has one. */
+function endSymbol(el, tag, key) {
+    const wrapper = childByTag(el, tag);
+    const point = wrapper &&
+        childByTag(childByTag(wrapper, "symbol") ?? wrapper, "point_symbol");
+    return point
+        ? { [key]: parsePoint(point) }
+        : {};
 }
 function parsePoint(el) {
     const elements = childrenByTag(el, "element").flatMap((elementEl) => {
@@ -337,7 +355,8 @@ class Renderer {
             return;
         // Border lines run alongside the main line, one on each side. A
         // single `<border>` describes both sides; two describe them
-        // separately (left first).
+        // separately (left first). As in Mapper, a border's shift is counted
+        // from the main line's edge, half its width out from the middle.
         const sides = line.borders.length === 1
             ? [
                 { border: line.borders[0], sign: 1 },
@@ -347,10 +366,25 @@ class Renderer {
         for (const { border, sign } of sides) {
             if (border.width <= 0)
                 continue;
-            const shifted = pathData(offsetPoints(points, sign * border.shift), false);
+            const shifted = pathData(offsetPoints(points, sign * (line.width / 2 + border.shift)), false);
             this.strokePath(shifted, line, border.color, border.width);
         }
         this.strokePath(d, line, line.color, line.width);
+        // The start and end symbols (a tunnel's splayed ends, a bridge's ticks),
+        // turned like Mapper turns them: their X axis along the line, pointing
+        // the way it runs. `drawPoint` takes the turn anticlockwise on screen.
+        const first = points[0];
+        const last = points[points.length - 1];
+        const next = points.find((p) => first && (p.x !== first.x || p.y !== first.y));
+        const before = [...points]
+            .reverse()
+            .find((p) => last && (p.x !== last.x || p.y !== last.y));
+        if (line.startSymbol && first && next) {
+            this.drawPoint(line.startSymbol, first, -Math.atan2(next.y - first.y, next.x - first.x));
+        }
+        if (line.endSymbol && last && before) {
+            this.drawPoint(line.endSymbol, last, -Math.atan2(last.y - before.y, last.x - before.x));
+        }
     }
     drawArea(symbol, points) {
         const d = pathData(points, true);
@@ -435,7 +469,10 @@ class Renderer {
         const transform = ` transform="translate(${x}, ${y})${rotation ? ` rotate(${-degrees(rotation)})` : ""}"`;
         for (const element of point.elements) {
             for (const op of this.elementOps(element)) {
-                this.ops.push({ order: op.order, markup: `<g${transform}>${op.markup}</g>` });
+                this.ops.push({
+                    order: op.order,
+                    markup: `<g${transform}>${op.markup}</g>`,
+                });
             }
         }
     }
@@ -456,7 +493,8 @@ class Renderer {
             return;
         const anchor = ["start", "middle", "end"][object.hAlign] ?? "start";
         // 0 is the font's own baseline, which is what SVG's default does.
-        const baseline = ["", "text-before-edge", "central", "text-after-edge"][object.vAlign] ?? "";
+        const baseline = ["", "text-before-edge", "central", "text-after-edge"][object.vAlign] ??
+            "";
         const lineHeight = text.size * text.lineSpacing;
         const tspans = object.text
             .split("\n")
@@ -645,7 +683,9 @@ function parseProjection(crs) {
     if (id === "UTM") {
         // Written as e.g. "33 N" or "33 S".
         const zone = Number(/\d+/.exec(parameters[0] ?? "")?.[0]);
-        return Number.isFinite(zone) ? utmProjection(zone, /s/i.test(parameters[0] ?? "")) : null;
+        return Number.isFinite(zone)
+            ? utmProjection(zone, /s/i.test(parameters[0] ?? ""))
+            : null;
     }
     return null;
 }

@@ -41,7 +41,10 @@ export function parseOcadFile(buffer: ArrayBuffer): ParsedOcadMap {
   }
 
   if (header.version < V8_BELOW) {
-    const parameterStrings = readParameterStrings(reader, header.stringIndexBlockPos);
+    const parameterStrings = readParameterStrings(
+      reader,
+      header.stringIndexBlockPos,
+    );
     const colors = readColorsV8(reader);
     const { symbols, objects } = readSymbolsAndObjectsV8(
       reader,
@@ -62,7 +65,10 @@ export function parseOcadFile(buffer: ArrayBuffer): ParsedOcadMap {
     };
   }
 
-  const parameterStrings = readParameterStrings(reader, header.stringIndexBlockPos);
+  const parameterStrings = readParameterStrings(
+    reader,
+    header.stringIndexBlockPos,
+  );
   const colors = readColors(parameterStrings);
   const colorsByNumber = new Map(colors.map((c) => [c.number, c]));
   const georef = readGeoReference(parameterStrings);
@@ -70,9 +76,13 @@ export function parseOcadFile(buffer: ArrayBuffer): ParsedOcadMap {
   const symbols = readSymbolIndex(reader, header.symbolIndexBlockPos)
     .map((entry) => {
       try {
-        return readSymbol(reader, header.version, entry.filePos, (m) => warnings.push(m));
+        return readSymbol(reader, header.version, entry.filePos, (m) =>
+          warnings.push(m),
+        );
       } catch (e) {
-        warnings.push(`Failed to read symbol at ${entry.filePos}: ${(e as Error).message}`);
+        warnings.push(
+          `Failed to read symbol at ${entry.filePos}: ${(e as Error).message}`,
+        );
         return null;
       }
     })
@@ -84,7 +94,9 @@ export function parseOcadFile(buffer: ArrayBuffer): ParsedOcadMap {
       try {
         return readObject(reader, header.version, entry.pos);
       } catch (e) {
-        warnings.push(`Failed to read object at ${entry.pos}: ${(e as Error).message}`);
+        warnings.push(
+          `Failed to read object at ${entry.pos}: ${(e as Error).message}`,
+        );
         return null;
       }
     })

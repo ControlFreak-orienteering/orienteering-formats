@@ -14,7 +14,12 @@ import { childByTag, childrenByTag, findByTag, parseCoords } from "./omap.js";
  */
 
 /** A rectangle in an OpenOrienteering Mapper file's own units (1/1000 mm, y down). */
-export type OmapRect = { minX: number; minY: number; maxX: number; maxY: number };
+export type OmapRect = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
 
 /**
  * Removes the objects outside the rectangle from the document.
@@ -44,13 +49,19 @@ export function cropOmapDoc(doc: Document, keep: OmapRect): number {
       }
       const inside =
         points.length === 0 ||
-        (maxX >= keep.minX && minX <= keep.maxX && maxY >= keep.minY && minY <= keep.maxY);
+        (maxX >= keep.minX &&
+          minX <= keep.maxX &&
+          maxY >= keep.minY &&
+          minY <= keep.maxY);
       if (inside) kept++;
       else objects.removeChild(el);
     }
     // Mapper writes the count and reads it as a size hint.
     if (objects.hasAttribute("count")) {
-      objects.setAttribute("count", String(childrenByTag(objects, "object").length));
+      objects.setAttribute(
+        "count",
+        String(childrenByTag(objects, "object").length),
+      );
     }
   }
   return kept;
@@ -65,11 +76,14 @@ export function cropOmapDoc(doc: Document, keep: OmapRect): number {
  */
 export function cropOmapXml(xml: string, keep: OmapRect): string {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
-  if (doc.querySelector("parsererror")) throw new Error("the map could not be read");
+  if (doc.querySelector("parsererror"))
+    throw new Error("the map could not be read");
   cropOmapDoc(doc, keep);
   const body = new XMLSerializer().serializeToString(doc);
   // The serializer leaves out the XML declaration. Mapper manages without
   // it, but the file should look as it did.
   const declaration = /^\s*<\?xml[^>]*\?>/.exec(xml)?.[0];
-  return declaration && !body.startsWith("<?xml") ? `${declaration}\n${body}` : body;
+  return declaration && !body.startsWith("<?xml")
+    ? `${declaration}\n${body}`
+    : body;
 }

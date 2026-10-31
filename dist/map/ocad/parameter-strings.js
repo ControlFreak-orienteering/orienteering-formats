@@ -11,7 +11,9 @@ export function readParameterStrings(reader, firstBlockPos) {
     // an earlier block (which would otherwise loop forever).
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= reader.length - BLOCK_BYTES &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         reader.push(blockPos);
         const nextBlockPos = reader.integer();

@@ -18,7 +18,12 @@
  */
 
 /** A rectangle in an OCAD file's own units (1/100 mm, y up). */
-export type OcadRect = { minX: number; minY: number; maxX: number; maxY: number };
+export type OcadRect = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
 
 /** Thrown by `cropOcad` when the file cannot be cropped. */
 export class OcadCropError extends Error {
@@ -36,8 +41,10 @@ type Header = {
 };
 
 function readHeader(view: DataView): Header {
-  if (view.byteLength < 60) throw new OcadCropError("too small for an OCAD file");
-  if (view.getUint16(0, true) !== 0x0cad) throw new OcadCropError("not an OCAD file");
+  if (view.byteLength < 60)
+    throw new OcadCropError("too small for an OCAD file");
+  if (view.getUint16(0, true) !== 0x0cad)
+    throw new OcadCropError("not an OCAD file");
   return {
     version: view.getUint16(4, true),
     symbolIndexBlockPos: view.getUint32(8, true),
@@ -50,14 +57,22 @@ type Entry = { at: number; pos: number };
 
 /** The object index's live entries. OCAD 8 has 24 bytes per entry and no
  * status field; newer files 40 bytes and a status (1 normal, 2 hidden). */
-function objectEntries(view: DataView, version: number, firstBlockPos: number): Entry[] {
+function objectEntries(
+  view: DataView,
+  version: number,
+  firstBlockPos: number,
+): Entry[] {
   const old = version < 9;
   const entryBytes = old ? 24 : 40;
   const blockBytes = 4 + 256 * entryBytes;
   const entries: Entry[] = [];
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
-  while (blockPos > 0 && blockPos <= view.byteLength - blockBytes && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= view.byteLength - blockBytes &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     const next = view.getUint32(blockPos, true);
     for (let i = 0; i < 256; i++) {
@@ -78,7 +93,11 @@ function objectEntries(view: DataView, version: number, firstBlockPos: number): 
 
 /** The object's extent from its own coordinates, or null if it has
  * none. */
-function objectExtent(view: DataView, version: number, pos: number): OcadRect | null {
+function objectExtent(
+  view: DataView,
+  version: number,
+  pos: number,
+): OcadRect | null {
   let nItem: number;
   let after: number;
   if (version < 9) {
@@ -110,18 +129,33 @@ function objectExtent(view: DataView, version: number, pos: number): OcadRect | 
 
 /** How long an object's record is: the header plus the coordinates and the text. */
 function objectLength(view: DataView, version: number, pos: number): number {
-  if (version < 9) return 32 + (view.getUint16(pos + 4, true) + view.getUint16(pos + 6, true)) * 8;
+  if (version < 9)
+    return (
+      32 + (view.getUint16(pos + 4, true) + view.getUint16(pos + 6, true)) * 8
+    );
   if (version <= 11) {
-    return 40 + (view.getUint32(pos + 8, true) + view.getUint16(pos + 12, true)) * 8;
+    return (
+      40 + (view.getUint32(pos + 8, true) + view.getUint16(pos + 12, true)) * 8
+    );
   }
-  return 56 + (view.getUint32(pos + 44, true) + view.getUint16(pos + 48, true)) * 8;
+  return (
+    56 + (view.getUint32(pos + 44, true) + view.getUint16(pos + 48, true)) * 8
+  );
 }
 
-function indexBlocks(view: DataView, firstBlockPos: number, entryBytes: number): number[] {
+function indexBlocks(
+  view: DataView,
+  firstBlockPos: number,
+  entryBytes: number,
+): number[] {
   const blocks: number[] = [];
   const visited = new Set<number>();
   let pos = firstBlockPos;
-  while (pos > 0 && !visited.has(pos) && pos + 4 + 256 * entryBytes <= view.byteLength) {
+  while (
+    pos > 0 &&
+    !visited.has(pos) &&
+    pos + 4 + 256 * entryBytes <= view.byteLength
+  ) {
     visited.add(pos);
     blocks.push(pos);
     pos = view.getUint32(pos, true);
@@ -139,7 +173,12 @@ function indexBlocks(view: DataView, firstBlockPos: number, entryBytes: number):
  * trusted, the length is counted to the next record in the file, whichever
  * it is.
  */
-function symbolRecords(view: DataView, firstBlockPos: number, old: boolean, starts: number[]) {
+function symbolRecords(
+  view: DataView,
+  firstBlockPos: number,
+  old: boolean,
+  starts: number[],
+) {
   const positions: number[] = [];
   for (const block of indexBlocks(view, firstBlockPos, 4)) {
     for (let i = 0; i < 256; i++) {
@@ -147,7 +186,9 @@ function symbolRecords(view: DataView, firstBlockPos: number, old: boolean, star
       if (pos > 0 && pos < view.byteLength) positions.push(pos);
     }
   }
-  const sorted = [...new Set([...starts, ...positions, view.byteLength])].sort((a, b) => a - b);
+  const sorted = [...new Set([...starts, ...positions, view.byteLength])].sort(
+    (a, b) => a - b,
+  );
   // Binary search: a map has tens of thousands of records.
   const nextAfter = (pos: number) => {
     let lo = 0;
@@ -176,7 +217,12 @@ function stringRecords(view: DataView, firstBlockPos: number) {
       const pos = view.getUint32(at, true);
       const size = view.getInt32(at + 4, true);
       const recordType = view.getInt32(at + 8, true);
-      if (recordType > 0 && pos > 0 && size > 0 && pos + size <= view.byteLength) {
+      if (
+        recordType > 0 &&
+        pos > 0 &&
+        size > 0 &&
+        pos + size <= view.byteLength
+      ) {
         records.push({ at, pos, size });
       }
     }
@@ -215,7 +261,9 @@ export function cropOcad(buffer: ArrayBuffer, keep: OcadRect): Uint8Array {
   // be counted to the next record when it is not stated correctly, see
   // `symbolRecords`.
   const starts = [
-    ...objectEntries(view, header.version, header.objectIndexBlockPos).map((e) => e.pos),
+    ...objectEntries(view, header.version, header.objectIndexBlockPos).map(
+      (e) => e.pos,
+    ),
     ...strings.map((r) => r.pos),
     ...indexBlocks(view, header.symbolIndexBlockPos, 4),
     ...indexBlocks(view, header.objectIndexBlockPos, entryBytes),
@@ -234,7 +282,8 @@ export function cropOcad(buffer: ArrayBuffer, keep: OcadRect): Uint8Array {
     header.objectIndexBlockPos,
     header.stringIndexBlockPos,
   );
-  if (!(headerBytes >= 60)) throw new OcadCropError("the file's indexes are out of place");
+  if (!(headerBytes >= 60))
+    throw new OcadCropError("the file's indexes are out of place");
 
   const symbolBlocks = blocksFor(symbols.length);
   const objectBlocks = blocksFor(kept.length);
@@ -273,7 +322,11 @@ export function cropOcad(buffer: ArrayBuffer, keep: OcadRect): Uint8Array {
   ) => {
     for (let b = 0; b < blockCount; b++) {
       const block = startAt + b * blockBytes;
-      outView.setUint32(block, b + 1 < blockCount ? startAt + (b + 1) * blockBytes : 0, true);
+      outView.setUint32(
+        block,
+        b + 1 < blockCount ? startAt + (b + 1) * blockBytes : 0,
+        true,
+      );
     }
     items.forEach((item, i) => {
       const block = startAt + Math.floor(i / 256) * blockBytes;

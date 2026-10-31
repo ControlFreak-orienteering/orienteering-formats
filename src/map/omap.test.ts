@@ -4,7 +4,10 @@ import { renderOmap } from "./omap.js";
 
 /** The tests run without a DOM, so the file gets a parser of its own. */
 const parse = (xml: string) =>
-  new DOMParser().parseFromString(xml, "application/xml") as unknown as Document;
+  new DOMParser().parseFromString(
+    xml,
+    "application/xml",
+  ) as unknown as Document;
 
 /**
  * A small map in the format's own shape: the colour table first, then the
@@ -120,7 +123,9 @@ describe("renderOmap", () => {
           `</coords></object>`,
       }),
     );
-    expect(innerMarkup).toContain(`d="M 0 0 C 10 0 20 0 30 0 L 0 0 Z M 5 5 L 8 5 L 5 8 L 5 5 Z"`);
+    expect(innerMarkup).toContain(
+      `d="M 0 0 C 10 0 20 0 30 0 L 0 0 Z M 5 5 L 8 5 L 5 8 L 5 5 Z"`,
+    );
     // The hole is cut out, not filled.
     expect(innerMarkup).toContain(`fill-rule="evenodd"`);
   });
@@ -128,7 +133,11 @@ describe("renderOmap", () => {
   it("gives a dashed line its dash pattern", () => {
     const { innerMarkup } = render(
       omap({
-        symbols: line(0, 100, ` dashed="true" dash_length="400" break_length="100"`),
+        symbols: line(
+          0,
+          100,
+          ` dashed="true" dash_length="400" break_length="100"`,
+        ),
         objects: `<object type="1" symbol="0"><coords count="2">0 0;100 0;</coords></object>`,
       }),
     );
@@ -145,10 +154,33 @@ describe("renderOmap", () => {
         objects: `<object type="1" symbol="0"><coords count="2">0 0;1000 0;</coords></object>`,
       }),
     );
-    // The line runs along X, so the edges end up a hundred units above and below.
-    expect(innerMarkup).toContain(`d="M 0 -100 L 1000 -100"`);
-    expect(innerMarkup).toContain(`d="M 0 100 L 1000 100"`);
+    // The line runs along X. As in Mapper, the shift is counted from the line's
+    // edge, half its 200 units out, so the borders run 200 units above and below.
+    expect(innerMarkup).toContain(`d="M 0 -200 L 1000 -200"`);
+    expect(innerMarkup).toContain(`d="M 0 200 L 1000 200"`);
     expect(innerMarkup).toContain(`d="M 0 0 L 1000 0"`);
+  });
+
+  it("draws a line's start and end symbols turned along it, as a tunnel's ends", () => {
+    const tick = (x: number) =>
+      `<point_symbol rotatable="true" inner_radius="0" inner_color="-1" outer_width="0" outer_color="-1" elements="1">` +
+      `<element><symbol type="2"><line_symbol color="0" line_width="50"/></symbol>` +
+      `<object type="1"><coords count="2">0 0;${x} -300;</coords></object></element></point_symbol>`;
+    const { innerMarkup } = render(
+      omap({
+        symbols:
+          `<symbol type="2"><line_symbol color="0" line_width="100">` +
+          `<start_symbol><symbol type="1">${tick(-200)}</symbol></start_symbol>` +
+          `<end_symbol><symbol type="1">${tick(200)}</symbol></end_symbol>` +
+          `</line_symbol></symbol>`,
+        objects: `<object type="1" symbol="0"><coords count="2">0 0;0 1000;</coords></object>`,
+      }),
+    );
+    // The line runs down the page (along +Y): a quarter turn clockwise on screen.
+    expect(innerMarkup).toContain(`transform="translate(0, 0) rotate(90)"`);
+    expect(innerMarkup).toContain(`transform="translate(0, 1000) rotate(90)"`);
+    expect(innerMarkup).toContain(`d="M 0 0 L -200 -300"`);
+    expect(innerMarkup).toContain(`d="M 0 0 L 200 -300"`);
   });
 
   it("turns a point symbol's graphics with the object's rotation", () => {
@@ -163,7 +195,9 @@ describe("renderOmap", () => {
       }),
     );
     // A quarter turn anticlockwise on screen, so a negative angle for SVG.
-    expect(innerMarkup).toContain(`transform="translate(400, 700) rotate(-90)"`);
+    expect(innerMarkup).toContain(
+      `transform="translate(400, 700) rotate(-90)"`,
+    );
     expect(innerMarkup).toContain(`d="M 0 -300 L 0 0"`);
   });
 
@@ -198,7 +232,11 @@ describe("renderOmap", () => {
 
   it("reads the scale, and falls back when the file's is nonsense", () => {
     const good = render(omap({ symbols: "", objects: "", scale: 7500 }));
-    expect(good).toMatchObject({ scale: 7500, scaleFromFile: true, metersPerUnit: 0.0075 });
+    expect(good).toMatchObject({
+      scale: 7500,
+      scaleFromFile: true,
+      metersPerUnit: 0.0075,
+    });
 
     const bad = render(omap({ symbols: "", objects: "", scale: 0 }));
     expect(bad).toMatchObject({ scale: 15000, scaleFromFile: false });
@@ -220,7 +258,11 @@ describe("the georeference", () => {
       easting: 610000,
       northing: 6799000,
       grivationDeg: 0,
-      projection: { centralMeridian: 15, scaleFactor: 0.9996, falseEasting: 500000 },
+      projection: {
+        centralMeridian: 15,
+        scaleFactor: 0.9996,
+        falseEasting: 500000,
+      },
     });
   });
 

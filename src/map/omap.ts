@@ -62,6 +62,10 @@ type LineDef = {
   capStyle: number;
   joinStyle: number;
   borders: Border[];
+  /** A point symbol drawn at the line's start, turned to point along it. */
+  startSymbol?: PointDef;
+  /** A point symbol drawn at the line's end, turned to point along it. */
+  endSymbol?: PointDef;
 };
 
 type PointDef = {
@@ -73,8 +77,20 @@ type PointDef = {
 };
 
 type AreaPattern =
-  | { kind: "hatch"; angle: number; spacing: number; color: number; width: number }
-  | { kind: "points"; angle: number; spacing: number; distance: number; point: PointDef };
+  | {
+      kind: "hatch";
+      angle: number;
+      spacing: number;
+      color: number;
+      width: number;
+    }
+  | {
+      kind: "points";
+      angle: number;
+      spacing: number;
+      distance: number;
+      point: PointDef;
+    };
 
 type TextDef = {
   family: string;
@@ -89,7 +105,13 @@ type TextDef = {
 type Symbol_ =
   | { kind: "point"; hidden: boolean; point: PointDef }
   | { kind: "line"; hidden: boolean; line: LineDef }
-  | { kind: "area"; hidden: boolean; innerColor: number; patterns: AreaPattern[]; id: number }
+  | {
+      kind: "area";
+      hidden: boolean;
+      innerColor: number;
+      patterns: AreaPattern[];
+      id: number;
+    }
   | { kind: "text"; hidden: boolean; text: TextDef }
   | { kind: "combined"; hidden: boolean; parts: (Symbol_ | number)[] }
   | { kind: "unknown"; hidden: boolean };
@@ -189,11 +211,18 @@ function colorRgb(el: Element): string {
  */
 export function parseColors(doc: Document): Map<number, OmapColor> {
   const colors = new Map<number, OmapColor>();
-  const table = findByTag(doc, "colors").flatMap((el) => childrenByTag(el, "color"));
+  const table = findByTag(doc, "colors").flatMap((el) =>
+    childrenByTag(el, "color"),
+  );
   table.forEach((el, index) => {
     const declared = num(el, "priority", Number.NaN);
     const order = Number.isFinite(declared) ? declared : index;
-    colors.set(order, { name: el.getAttribute("name") ?? "", rgb: colorRgb(el), opacity: num(el, "opacity", 1), order });
+    colors.set(order, {
+      name: el.getAttribute("name") ?? "",
+      rgb: colorRgb(el),
+      opacity: num(el, "opacity", 1),
+      order,
+    });
   });
   return colors;
 }
@@ -205,7 +234,12 @@ export function parseCoords(el: Element | null): Pt[] {
   const pts: Pt[] = [];
   for (const part of text.split(";")) {
     const nums = part.trim().split(/\s+/).map(Number);
-    if (nums.length < 2 || !Number.isFinite(nums[0]!) || !Number.isFinite(nums[1]!)) continue;
+    if (
+      nums.length < 2 ||
+      !Number.isFinite(nums[0]!) ||
+      !Number.isFinite(nums[1]!)
+    )
+      continue;
     const flags = nums[2] ?? 0;
     pts.push({
       x: nums[0]!,
@@ -236,7 +270,24 @@ function parseLine(el: Element): LineDef {
         shift: num(b, "shift"),
       })),
     ),
+    ...endSymbol(el, "start_symbol", "startSymbol"),
+    ...endSymbol(el, "end_symbol", "endSymbol"),
   };
+}
+
+/** A line's start or end symbol (`<start_symbol>`, `<end_symbol>`), when it has one. */
+function endSymbol<K extends "startSymbol" | "endSymbol">(
+  el: Element,
+  tag: string,
+  key: K,
+): Partial<Record<K, PointDef>> {
+  const wrapper = childByTag(el, tag);
+  const point =
+    wrapper &&
+    childByTag(childByTag(wrapper, "symbol") ?? wrapper, "point_symbol");
+  return point
+    ? ({ [key]: parsePoint(point) } as Partial<Record<K, PointDef>>)
+    : {};
 }
 
 function parsePoint(el: Element): PointDef {
@@ -334,13 +385,15 @@ function parseSymbol(el: Element): Symbol_ {
 
   const combined = childByTag(el, "combined_symbol");
   if (combined) {
-    const parts = childrenByTag(combined, "part").map((partEl): Symbol_ | number => {
-      // A part is either spelled out inline ("private") or a reference to
-      // another symbol in the map's own symbol set, resolved at drawing
-      // time since it may point forwards.
-      const inline = childByTag(partEl, "symbol");
-      return inline ? parseSymbol(inline) : num(partEl, "symbol", -1);
-    });
+    const parts = childrenByTag(combined, "part").map(
+      (partEl): Symbol_ | number => {
+        // A part is either spelled out inline ("private") or a reference to
+        // another symbol in the map's own symbol set, resolved at drawing
+        // time since it may point forwards.
+        const inline = childByTag(partEl, "symbol");
+        return inline ? parseSymbol(inline) : num(partEl, "symbol", -1);
+      },
+    );
     return { kind: "combined", hidden, parts };
   }
 
@@ -390,7 +443,12 @@ class Renderer {
     return opacity < 1 ? ` ${kind}-opacity="${opacity}"` : "";
   }
 
-  private strokePath(d: string, line: LineDef, colorNumber: number, width: number): void {
+  private strokePath(
+    d: string,
+    line: LineDef,
+    colorNumber: number,
+    width: number,
+  ): void {
     if (!d || width <= 0 || colorNumber === NO_COLOR) return;
     const cap = ["butt", "round", "square", "butt"][line.capStyle] ?? "round";
     const join = ["bevel", "miter", "round"][line.joinStyle] ?? "round";
@@ -443,7 +501,8 @@ class Renderer {
 
     // Border lines run alongside the main line, one on each side. A
     // single `<border>` describes both sides; two describe them
-    // separately (left first).
+    // separately (left first). As in Mapper, a border's shift is counted
+    // from the main line's edge, half its width out from the middle.
     const sides: { border: Border; sign: number }[] =
       line.borders.length === 1
         ? [
@@ -454,11 +513,40 @@ class Renderer {
 
     for (const { border, sign } of sides) {
       if (border.width <= 0) continue;
-      const shifted = pathData(offsetPoints(points, sign * border.shift), false);
+      const shifted = pathData(
+        offsetPoints(points, sign * (line.width / 2 + border.shift)),
+        false,
+      );
       this.strokePath(shifted, line, border.color, border.width);
     }
 
     this.strokePath(d, line, line.color, line.width);
+
+    // The start and end symbols (a tunnel's splayed ends, a bridge's ticks),
+    // turned like Mapper turns them: their X axis along the line, pointing
+    // the way it runs. `drawPoint` takes the turn anticlockwise on screen.
+    const first = points[0];
+    const last = points[points.length - 1];
+    const next = points.find(
+      (p) => first && (p.x !== first.x || p.y !== first.y),
+    );
+    const before = [...points]
+      .reverse()
+      .find((p) => last && (p.x !== last.x || p.y !== last.y));
+    if (line.startSymbol && first && next) {
+      this.drawPoint(
+        line.startSymbol,
+        first,
+        -Math.atan2(next.y - first.y, next.x - first.x),
+      );
+    }
+    if (line.endSymbol && last && before) {
+      this.drawPoint(
+        line.endSymbol,
+        last,
+        -Math.atan2(last.y - before.y, last.x - before.x),
+      );
+    }
   }
 
   private drawArea(symbol: Symbol_ & { kind: "area" }, points: Pt[]): void {
@@ -486,7 +574,10 @@ class Renderer {
    * once however many objects use the symbol. Returns the id to paint
    * with and the paint order the fill belongs at.
    */
-  private patternDef(id: string, pattern: AreaPattern): { id: string; order: number } | null {
+  private patternDef(
+    id: string,
+    pattern: AreaPattern,
+  ): { id: string; order: number } | null {
     const known = this.defs.get(id);
     if (known) return { id, order: known.order };
 
@@ -509,7 +600,11 @@ class Renderer {
     // marsh, the stones of scree) meant to sit on top of the plain colors
     // beneath.
     const tile = new Renderer(this.colors, this.symbols);
-    tile.drawPoint(pattern.point, { x: pattern.distance / 2, y: pattern.spacing / 2 }, 0);
+    tile.drawPoint(
+      pattern.point,
+      { x: pattern.distance / 2, y: pattern.spacing / 2 },
+      0,
+    );
     if (tile.ops.length === 0) return null;
     const markup =
       `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${pattern.distance}" height="${pattern.spacing}"${transform}>` +
@@ -527,7 +622,11 @@ class Renderer {
    * `rotation` is in radians and turns counter-clockwise on screen, so it
    * is negated for SVG's `rotate()`, which turns the other way.
    */
-  private drawPoint(point: PointDef, at: { x: number; y: number } | undefined, rotation: number) {
+  private drawPoint(
+    point: PointDef,
+    at: { x: number; y: number } | undefined,
+    rotation: number,
+  ) {
     if (!at) return;
     const { x, y } = at;
 
@@ -553,7 +652,10 @@ class Renderer {
     const transform = ` transform="translate(${x}, ${y})${rotation ? ` rotate(${-degrees(rotation)})` : ""}"`;
     for (const element of point.elements) {
       for (const op of this.elementOps(element)) {
-        this.ops.push({ order: op.order, markup: `<g${transform}>${op.markup}</g>` });
+        this.ops.push({
+          order: op.order,
+          markup: `<g${transform}>${op.markup}</g>`,
+        });
       }
     }
   }
@@ -571,15 +673,19 @@ class Renderer {
   }
 
   private drawText(text: TextDef, at: Pt | undefined, object: MapObject): void {
-    if (!at || !object.text || text.color === NO_COLOR || text.size <= 0) return;
+    if (!at || !object.text || text.color === NO_COLOR || text.size <= 0)
+      return;
     const anchor = ["start", "middle", "end"][object.hAlign] ?? "start";
     // 0 is the font's own baseline, which is what SVG's default does.
-    const baseline = ["", "text-before-edge", "central", "text-after-edge"][object.vAlign] ?? "";
+    const baseline =
+      ["", "text-before-edge", "central", "text-after-edge"][object.vAlign] ??
+      "";
     const lineHeight = text.size * text.lineSpacing;
     const tspans = object.text
       .split("\n")
       .map(
-        (line, i) => `<tspan x="${at.x}" y="${at.y + i * lineHeight}">${escapeXml(line)}</tspan>`,
+        (line, i) =>
+          `<tspan x="${at.x}" y="${at.y + i * lineHeight}">${escapeXml(line)}</tspan>`,
       )
       .join("");
     const transform = object.rotation
@@ -645,7 +751,8 @@ const PLACEHOLDER_OBJECT: MapObject = {
 
 /** Angles are stored in radians; SVG wants degrees, and four decimals of
  * a degree is a tenth of a millimetre a hundred metres away. */
-const degrees = (radians: number) => Math.round(((radians * 180) / Math.PI) * 1e4) / 1e4;
+const degrees = (radians: number) =>
+  Math.round(((radians * 180) / Math.PI) * 1e4) / 1e4;
 
 /**
  * The dash pattern as a `stroke-dasharray`.
@@ -661,7 +768,8 @@ function dashArray(line: LineDef): string | null {
   const inGroup = line.inGroupBreakLength;
   if (line.dashesInGroup > 1 && inGroup > 0) {
     const parts: number[] = [];
-    for (let i = 1; i < line.dashesInGroup; i++) parts.push(line.dashLength, inGroup);
+    for (let i = 1; i < line.dashesInGroup; i++)
+      parts.push(line.dashLength, inGroup);
     parts.push(line.dashLength, gap);
     return parts.join(" ");
   }
@@ -772,7 +880,9 @@ function parseProjection(crs: Element): TransverseMercator | null {
     if (fromSpec) return fromSpec;
   }
 
-  const parameters = childrenByTag(crs, "parameter").map((p) => (p.textContent ?? "").trim());
+  const parameters = childrenByTag(crs, "parameter").map((p) =>
+    (p.textContent ?? "").trim(),
+  );
   const id = crs.getAttribute("id") ?? "";
   if (id === "EPSG") {
     const code = Number(parameters[0]);
@@ -781,7 +891,9 @@ function parseProjection(crs: Element): TransverseMercator | null {
   if (id === "UTM") {
     // Written as e.g. "33 N" or "33 S".
     const zone = Number(/\d+/.exec(parameters[0] ?? "")?.[0]);
-    return Number.isFinite(zone) ? utmProjection(zone, /s/i.test(parameters[0] ?? "")) : null;
+    return Number.isFinite(zone)
+      ? utmProjection(zone, /s/i.test(parameters[0] ?? ""))
+      : null;
   }
   return null;
 }
@@ -793,7 +905,10 @@ function parseProjection(crs: Element): TransverseMercator | null {
  * overridden the scale, and then that is the scale the map is being worked
  * in, so it has to be the one the offsets are measured with too.
  */
-export function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGeoreference | null {
+export function parseGeoreferencing(
+  doc: Document,
+  metersPerUnit: number,
+): MapGeoreference | null {
   const geo = findByTag(doc, "georeferencing")[0];
   if (!geo) return null;
   const projectedCrs = childByTag(geo, "projected_crs");
@@ -833,9 +948,16 @@ export function parseGeoreferencing(doc: Document, metersPerUnit: number): MapGe
  * The map's scale denominator, with a fallback of 1:15000 when the file gives
  * none or a nonsensical one (`scaleFromFile` is then false).
  */
-export function parseScale(doc: Document): { scale: number; scaleFromFile: boolean } {
+export function parseScale(doc: Document): {
+  scale: number;
+  scaleFromFile: boolean;
+} {
   const map = findByTag(doc, "map")[0] ?? doc.documentElement;
-  const rawScale = num(findByTag(doc, "georeferencing")[0] ?? map, "scale", 15000);
+  const rawScale = num(
+    findByTag(doc, "georeferencing")[0] ?? map,
+    "scale",
+    15000,
+  );
   // Guard against missing or nonsensical scale values in the file.
   const scaleFromFile = rawScale >= 500 && rawScale <= 200000;
   return { scale: scaleFromFile ? rawScale : 15000, scaleFromFile };

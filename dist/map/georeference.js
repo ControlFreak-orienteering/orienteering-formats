@@ -179,7 +179,8 @@ function project(p, latDeg, lngDeg) {
     const phi = latDeg * RAD;
     const dLon = (lngDeg - p.centralMeridian) * RAD;
     const s = Math.sin(phi);
-    const phiStar = phi - Math.sin(phi) * Math.cos(phi) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
+    const phiStar = phi -
+        Math.sin(phi) * Math.cos(phi) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
     const xi = Math.atan(Math.tan(phiStar) / Math.cos(dLon));
     const eta = Math.atanh(Math.cos(phiStar) * Math.sin(dLon));
     const north = p.scaleFactor *
@@ -242,7 +243,10 @@ export function unproject(p, easting, northing) {
     const C = (224 * e2 ** 3 + 889 * e2 ** 4) / 120;
     const D = -(4279 * e2 ** 4) / 1260;
     const s = Math.sin(phiStar);
-    const phi = phiStar + Math.sin(phiStar) * Math.cos(phiStar) * (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
+    const phi = phiStar +
+        Math.sin(phiStar) *
+            Math.cos(phiStar) *
+            (A + B * s ** 2 + C * s ** 4 + D * s ** 6);
     return { lat: phi / RAD, lng: p.centralMeridian + dLon / RAD };
 }
 /**

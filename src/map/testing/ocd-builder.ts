@@ -99,7 +99,10 @@ class ByteWriter {
   }
   /** OCAD PascalString: length byte + 8-bit chars, padded to `fieldSize`. */
   pascalString(s: string, fieldSize: number) {
-    const chars = Array.from(s, (c) => c.charCodeAt(0) & 0xff).slice(0, fieldSize - 1);
+    const chars = Array.from(s, (c) => c.charCodeAt(0) & 0xff).slice(
+      0,
+      fieldSize - 1,
+    );
     this.byte(chars.length);
     for (const c of chars) this.byte(c);
     this.zeros(fieldSize - 1 - chars.length);
@@ -107,7 +110,8 @@ class ByteWriter {
   /** UTF-16LE in a fixed field of `codeUnits` code units, NUL padded. */
   utf16Fixed(s: string, codeUnits: number) {
     let n = 0;
-    for (let i = 0; i < s.length && n < codeUnits; i++, n++) this.word(s.charCodeAt(i));
+    for (let i = 0; i < s.length && n < codeUnits; i++, n++)
+      this.word(s.charCodeAt(i));
     this.zeros((codeUnits - n) * 2);
   }
   patchCardinal(at: number, v: number) {
@@ -144,7 +148,8 @@ export class OcdFileBuilder {
   private symbols: SymbolRecord[] = [];
   private objects: ObjectSpec[] = [];
   /** Test hooks: make an index block's "next block" pointer point at itself. */
-  selfLinkedIndex: { strings?: boolean; symbols?: boolean; objects?: boolean } = {};
+  selfLinkedIndex: { strings?: boolean; symbols?: boolean; objects?: boolean } =
+    {};
 
   constructor(readonly version: OcdVersion) {}
 
@@ -154,7 +159,11 @@ export class OcdFileBuilder {
   }
 
   /** Convenience: a type-9 color record. Colors are listed front-most first. */
-  addColor(number: number, name: string, cmyk: [number, number, number, number]): this {
+  addColor(
+    number: number,
+    name: string,
+    cmyk: [number, number, number, number],
+  ): this {
     const [c, m, y, k] = cmyk;
     return this.addString(9, `${name}\tn${number}\tc${c}\tm${m}\ty${y}\tk${k}`);
   }
@@ -221,7 +230,9 @@ export class OcdFileBuilder {
     return this;
   }
 
-  addAreaSymbol(spec: SymbolBase & { fillColor: number; fillOn?: boolean }): this {
+  addAreaSymbol(
+    spec: SymbolBase & { fillColor: number; fillOn?: boolean },
+  ): this {
     this.symbols.push({
       symNum: spec.symNum,
       body: (w) => {
@@ -256,7 +267,11 @@ export class OcdFileBuilder {
   }
 
   addTextSymbol(
-    spec: SymbolBase & { fontName: string; fontColor: number; fontSizeTenths: number },
+    spec: SymbolBase & {
+      fontName: string;
+      fontColor: number;
+      fontSizeTenths: number;
+    },
   ): this {
     this.symbols.push({
       symNum: spec.symNum,

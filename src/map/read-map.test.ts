@@ -1,12 +1,20 @@
 import { DOMParser } from "@xmldom/xmldom";
 import { describe, expect, it } from "vitest";
 
-import { MapError, mapFileFormat, mapSvgMarkup, readMapFile } from "./read-map.js";
+import {
+  MapError,
+  mapFileFormat,
+  mapSvgMarkup,
+  readMapFile,
+} from "./read-map.js";
 import { OcdFileBuilder } from "./testing/ocd-builder.js";
 
 /** The tests run without a DOM, so .omap files get xmldom's parser. */
 const parseXml = (xml: string) =>
-  new DOMParser().parseFromString(xml, "application/xml") as unknown as Document;
+  new DOMParser().parseFromString(
+    xml,
+    "application/xml",
+  ) as unknown as Document;
 
 /** A small OCAD map at 1:10 000 with one boulder at (1234, -5678). */
 function ocadMap(scale = 10000): ArrayBuffer {
@@ -70,7 +78,11 @@ describe("readMapFile", () => {
   });
 
   it("draws an OpenOrienteering Mapper map, with its scale", () => {
-    const drawing = readMapFile(new TextEncoder().encode(OMAP), "Kantorp.omap", { parseXml });
+    const drawing = readMapFile(
+      new TextEncoder().encode(OMAP),
+      "Kantorp.omap",
+      { parseXml },
+    );
     expect(drawing.format).toBe("omap");
     expect(drawing.scale).toBe(7500);
     // 1/1000 mm at 1:7 500.
@@ -80,7 +92,9 @@ describe("readMapFile", () => {
 
   it("gives a standalone SVG document", () => {
     const markup = mapSvgMarkup(readMapFile(ocadMap(), "Kantorp.ocd"));
-    expect(markup.startsWith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="')).toBe(true);
+    expect(
+      markup.startsWith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="'),
+    ).toBe(true);
     expect(parseXml(markup).documentElement.localName).toBe("svg");
   });
 

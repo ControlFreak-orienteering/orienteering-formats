@@ -44,7 +44,12 @@ function colorOrder(map: ParsedOcadMap, colorNumber: number): number {
   return map.colorsByNumber.get(colorNumber)?.order ?? 0;
 }
 
-function push(ops: DrawOp[], map: ParsedOcadMap, colorNumber: number, markup: string): void {
+function push(
+  ops: DrawOp[],
+  map: ParsedOcadMap,
+  colorNumber: number,
+  markup: string,
+): void {
   if (!markup) return;
   ops.push({ order: colorOrder(map, colorNumber), markup });
 }
@@ -60,7 +65,10 @@ function push(ops: DrawOp[], map: ParsedOcadMap, colorNumber: number, markup: st
  * @param options - See `RenderOptions`.
  * @returns The SVG content and the `viewBox` that holds it.
  */
-export function renderMapSvg(map: ParsedOcadMap, options: RenderOptions = {}): RenderedMap {
+export function renderMapSvg(
+  map: ParsedOcadMap,
+  options: RenderOptions = {},
+): RenderedMap {
   const exportHidden = options.exportHidden ?? false;
   const defs = collectPatternDefs(map);
 
@@ -199,7 +207,11 @@ function hatchPatternDef(
  * full row plus a second row offset by half a cell — split across the
  * tile's left and right edges so it still repeats seamlessly.
  */
-function structurePatternDef(id: string, symbol: AreaSymbol, map: ParsedOcadMap): string {
+function structurePatternDef(
+  id: string,
+  symbol: AreaSymbol,
+  map: ParsedOcadMap,
+): string {
   const s = symbol.structure!;
   const w = Math.max(1, s.cellWidth);
   const ch = Math.max(1, s.cellHeight);
@@ -215,7 +227,11 @@ function structurePatternDef(id: string, symbol: AreaSymbol, map: ParsedOcadMap)
 
   const pieces = anchors.flatMap(([anchorX, anchorY]) =>
     symbol.elements.map((el) =>
-      renderElement(el, (p) => ({ ...p, x: p.x + anchorX, y: p.y - anchorY }), map),
+      renderElement(
+        el,
+        (p) => ({ ...p, x: p.x + anchorX, y: p.y - anchorY }),
+        map,
+      ),
     ),
   );
   return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${w}" height="${height}" patternTransform="rotate(${-s.angleDeg})">${pieces.join("")}</pattern>`;
@@ -235,7 +251,12 @@ function renderLineObject(
       ops,
       map,
       symbol.framing.color,
-      strokePath(d, colorRgb(map, symbol.framing.color), symbol.framing.width, dash),
+      strokePath(
+        d,
+        colorRgb(map, symbol.framing.color),
+        symbol.framing.width,
+        dash,
+      ),
     );
   }
 
@@ -246,7 +267,12 @@ function renderLineObject(
     // the symbol's whole width. Filling the whole width made roads too wide,
     // and gave them the fill colour all the way out to the edge.
     if (dbl.fillOn && dbl.width > 0) {
-      push(ops, map, dbl.fillColor, strokePath(d, colorRgb(map, dbl.fillColor), dbl.width, null));
+      push(
+        ops,
+        map,
+        dbl.fillColor,
+        strokePath(d, colorRgb(map, dbl.fillColor), dbl.width, null),
+      );
     }
 
     // The side lines. They lie outside the middle part, one on each side, and
@@ -261,7 +287,12 @@ function renderLineObject(
       if (side.width <= 0) continue;
       const shift = (side.sign * (dbl.width + side.width)) / 2;
       const sideD = pathData(offsetPoints(obj.coordinates, shift), false);
-      push(ops, map, side.color, strokePath(sideD, colorRgb(map, side.color), side.width, null));
+      push(
+        ops,
+        map,
+        side.color,
+        strokePath(sideD, colorRgb(map, side.color), side.width, null),
+      );
     }
   }
 
@@ -274,7 +305,8 @@ function renderLineObject(
     );
   }
 
-  if (symbol.decorations) renderLineDecorations(obj, symbol, symbol.decorations, map, ops);
+  if (symbol.decorations)
+    renderLineDecorations(obj, symbol, symbol.decorations, map, ops);
 }
 
 /** A point along a line: where it is and which way the line goes there (radians, y up). */
@@ -342,7 +374,10 @@ function flattenLine(points: OcadPoint[]): FlatLine[] {
 }
 
 /** The direction from one point to another, in radians with y up. */
-function heading(a: { x: number; y: number }, b: { x: number; y: number }): number {
+function heading(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
 
@@ -359,7 +394,8 @@ function repeatPositions(length: number, symbol: LineSymbol): number[] {
   if (!(length > 0) || !(mainLength > 0)) return length > 0 ? [length / 2] : [];
   if (mainGap > 0 && dashArray(symbol)) {
     const out: number[] = [];
-    for (let s = mainLength / 2; s < length; s += mainLength + mainGap) out.push(s);
+    for (let s = mainLength / 2; s < length; s += mainLength + mainGap)
+      out.push(s);
     return out;
   }
   const usable = length - 2 * Math.max(0, endLength);
@@ -379,7 +415,10 @@ function placesAlong(line: FlatLine, distances: number[]): LinePlace[] {
   let walked = 0;
   for (const s of distances) {
     while (i < pts.length - 2) {
-      const piece = Math.hypot(pts[i + 1]!.x - pts[i]!.x, pts[i + 1]!.y - pts[i]!.y);
+      const piece = Math.hypot(
+        pts[i + 1]!.x - pts[i]!.x,
+        pts[i + 1]!.y - pts[i]!.y,
+      );
       if (walked + piece >= s) break;
       walked += piece;
       i++;
@@ -388,7 +427,11 @@ function placesAlong(line: FlatLine, distances: number[]): LinePlace[] {
     const b = pts[i + 1]!;
     const piece = Math.hypot(b.x - a.x, b.y - a.y);
     const t = piece > 0 ? Math.min(1, Math.max(0, (s - walked) / piece)) : 0;
-    places.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, angle: heading(a, b) });
+    places.push({
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      angle: heading(a, b),
+    });
   }
   return places;
 }
@@ -406,7 +449,11 @@ function lineLength(line: FlatLine): number {
 }
 
 /** The first point on a piece of real length, from `from` in steps of `step`. */
-function nextDistinct(points: { x: number; y: number }[], from: number, step: number) {
+function nextDistinct(
+  points: { x: number; y: number }[],
+  from: number,
+  step: number,
+) {
   for (let j = from + step; j >= 0 && j < points.length; j += step) {
     const p = points[j]!;
     if (p.x !== points[from]!.x || p.y !== points[from]!.y) return p;
@@ -428,7 +475,10 @@ function renderLineDecorations(
   map: ParsedOcadMap,
   ops: DrawOp[],
 ): void {
-  const strokes = new Map<string, { color: number; width: number; d: string[] }>();
+  const strokes = new Map<
+    string,
+    { color: number; width: number; d: string[] }
+  >();
   const fills = new Map<number, string[]>();
   const dots: { color: number; markup: string }[] = [];
 
@@ -445,7 +495,11 @@ function renderLineDecorations(
       if (el.type === "line") {
         if (el.lineWidth <= 0) continue;
         const key = `${el.color}|${el.lineWidth}`;
-        const entry = strokes.get(key) ?? { color: el.color, width: el.lineWidth, d: [] };
+        const entry = strokes.get(key) ?? {
+          color: el.color,
+          width: el.lineWidth,
+          d: [],
+        };
         entry.d.push(pathData(points, false));
         strokes.set(key, entry);
       } else if (el.type === "area") {
@@ -453,7 +507,10 @@ function renderLineDecorations(
         list.push(pathData(points, true));
         fills.set(el.color, list);
       } else {
-        dots.push({ color: el.color, markup: renderElement({ ...el, points }, (p) => p, map) });
+        dots.push({
+          color: el.color,
+          markup: renderElement({ ...el, points }, (p) => p, map),
+        });
       }
     }
   };
@@ -470,10 +527,14 @@ function renderLineDecorations(
       // Several symbols in a group stand `primaryDistance` apart, centred on the place.
       const distances = centres.flatMap((c) =>
         Array.from({ length: count }, (_, k) =>
-          Math.min(length, Math.max(0, c - spread / 2 + k * decorations.primaryDistance)),
+          Math.min(
+            length,
+            Math.max(0, c - spread / 2 + k * decorations.primaryDistance),
+          ),
         ),
       );
-      for (const at of placesAlong(line, distances)) draw(decorations.primary, at);
+      for (const at of placesAlong(line, distances))
+        draw(decorations.primary, at);
     }
 
     if (decorations.corner.length) {
@@ -487,7 +548,10 @@ function renderLineDecorations(
         if (before && after) {
           const a = heading(before, p);
           const b = heading(p, after);
-          angle = Math.atan2(Math.sin(a) + Math.sin(b), Math.cos(a) + Math.cos(b));
+          angle = Math.atan2(
+            Math.sin(a) + Math.sin(b),
+            Math.cos(a) + Math.cos(b),
+          );
         } else if (after) angle = heading(p, after);
         else if (before) angle = heading(before, p);
         else continue;
@@ -497,19 +561,30 @@ function renderLineDecorations(
 
     if (decorations.start.length) {
       const after = nextDistinct(pts, 0, 1);
-      if (after) draw(decorations.start, { ...pts[0]!, angle: heading(pts[0]!, after) });
+      if (after)
+        draw(decorations.start, { ...pts[0]!, angle: heading(pts[0]!, after) });
     }
     if (decorations.end.length) {
       const last = pts.length - 1;
       const before = nextDistinct(pts, last, -1);
-      if (before) draw(decorations.end, { ...pts[last]!, angle: heading(before, pts[last]!) });
+      if (before)
+        draw(decorations.end, {
+          ...pts[last]!,
+          angle: heading(before, pts[last]!),
+        });
     }
   }
 
   for (const s of strokes.values()) {
-    push(ops, map, s.color, strokePath(s.d.join(" "), colorRgb(map, s.color), s.width, null));
+    push(
+      ops,
+      map,
+      s.color,
+      strokePath(s.d.join(" "), colorRgb(map, s.color), s.width, null),
+    );
   }
-  for (const [color, d] of fills) push(ops, map, color, fillPath(d.join(" "), colorRgb(map, color)));
+  for (const [color, d] of fills)
+    push(ops, map, color, fillPath(d.join(" "), colorRgb(map, color)));
   for (const dot of dots) push(ops, map, dot.color, dot.markup);
 }
 
@@ -587,7 +662,8 @@ function dashArray(symbol: LineSymbol): string | null {
   // A dash no longer than zero cannot be drawn, and a negative number
   // makes the browser throw away the whole pattern.
   if (!(dash > 0)) return null;
-  if (secondaryGap && mainGap) return `${dash} ${secondaryGap} ${dash} ${mainGap}`;
+  if (secondaryGap && mainGap)
+    return `${dash} ${secondaryGap} ${dash} ${mainGap}`;
   const gap = secondaryGap || mainGap || endGap;
   if (!gap) return null;
   return `${dash} ${gap}`;
@@ -606,12 +682,27 @@ function renderAreaObject(
   // these layer rather than being mutually exclusive — and each layers in
   // at its own color's paint order, not necessarily together.
   if (symbol.fillOn) {
-    push(ops, map, symbol.fillColor, fillPath(d, colorRgb(map, symbol.fillColor)));
+    push(
+      ops,
+      map,
+      symbol.fillColor,
+      fillPath(d, colorRgb(map, symbol.fillColor)),
+    );
   }
   if (symbol.hatchMode) {
-    push(ops, map, symbol.hatchColor, fillPath(d, `url(#hatch-${symbol.symNum}-1)`));
+    push(
+      ops,
+      map,
+      symbol.hatchColor,
+      fillPath(d, `url(#hatch-${symbol.symNum}-1)`),
+    );
     if (symbol.hatchMode === 2) {
-      push(ops, map, symbol.hatchColor, fillPath(d, `url(#hatch-${symbol.symNum}-2)`));
+      push(
+        ops,
+        map,
+        symbol.hatchColor,
+        fillPath(d, `url(#hatch-${symbol.symNum}-2)`),
+      );
     }
   }
   if (symbol.structure) {
@@ -625,7 +716,10 @@ function renderAreaObject(
       ...symbol.elements.map((el) => colorOrder(map, el.color)),
       Number.MAX_SAFE_INTEGER,
     );
-    ops.push({ order: structureOrder, markup: fillPath(d, `url(#struct-${symbol.symNum})`) });
+    ops.push({
+      order: structureOrder,
+      markup: fillPath(d, `url(#struct-${symbol.symNum})`),
+    });
   }
 
   if (symbol.borderSymbolNumber) {
@@ -703,14 +797,20 @@ function renderTextObject(
   const lines = obj.text.split("\n");
   const tspans = lines
     .map(
-      (line, i) => `<tspan x="${p.x}" y="${-p.y + i * fontSize * 1.2}">${escapeXml(line)}</tspan>`,
+      (line, i) =>
+        `<tspan x="${p.x}" y="${-p.y + i * fontSize * 1.2}">${escapeXml(line)}</tspan>`,
     )
     .join("");
   const markup = `<text x="${p.x}" y="${-p.y}" fill="${colorRgb(map, symbol.fontColor)}" font-family="${escapeXml(symbol.fontName || "sans-serif")}" font-size="${fontSize}" font-weight="${symbol.bold ? "bold" : "normal"}" font-style="${symbol.italic ? "italic" : "normal"}" text-anchor="${anchor}">${tspans}</text>`;
   push(ops, map, symbol.fontColor, markup);
 }
 
-function strokePath(d: string, color: string, width: number, dash: string | null): string {
+function strokePath(
+  d: string,
+  color: string,
+  width: number,
+  dash: string | null,
+): string {
   if (width <= 0 || !d) return "";
   return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${dash ? ` stroke-dasharray="${dash}"` : ""} />`;
 }
@@ -748,7 +848,8 @@ function pathData(points: OcadPoint[], closeSubPaths: boolean): string {
       continue;
     }
     if (p.holeStart) {
-      if (closeSubPaths) segments.push(`L ${subPathStart.x} ${-subPathStart.y} Z`);
+      if (closeSubPaths)
+        segments.push(`L ${subPathStart.x} ${-subPathStart.y} Z`);
       subPathStart = p;
       segments.push(`M ${p.x} ${-p.y}`);
       continue;
@@ -788,4 +889,3 @@ export function escapeXml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-

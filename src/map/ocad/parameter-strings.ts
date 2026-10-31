@@ -34,7 +34,11 @@ export function readParameterStrings(
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
 
-  while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= reader.length - BLOCK_BYTES &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     reader.push(blockPos);
     const nextBlockPos = reader.integer();
@@ -44,7 +48,8 @@ export function readParameterStrings(
       const size = reader.integer();
       const recordType = reader.integer();
       reader.integer(); // owning object index, not needed here
-      if (recordType > 0 && pos > 0 && pos < reader.length) entries.push({ pos, size, recordType });
+      if (recordType > 0 && pos > 0 && pos < reader.length)
+        entries.push({ pos, size, recordType });
     }
     reader.pop();
 
@@ -72,7 +77,10 @@ export function readParameterStrings(
   return byType;
 }
 
-function parseParameterString(recordType: number, text: string): ParameterString {
+function parseParameterString(
+  recordType: number,
+  text: string,
+): ParameterString {
   const parts = text.split("\t");
   const fields = new Map<string, string>();
   for (let i = 1; i < parts.length; i++) {

@@ -110,7 +110,13 @@ export function readColorsV8(reader: BinaryReader): OcadColor[] {
       const [r, g, b] = cmykToRgb(cmyk);
       // The same order convention as newer files: the first defined
       // colour is the one printed last, that is, on top.
-      colors.push({ number, name, cmyk, rgb: `rgb(${r}, ${g}, ${b})`, order: i });
+      colors.push({
+        number,
+        name,
+        cmyk,
+        rgb: `rgb(${r}, ${g}, ${b})`,
+        order: i,
+      });
     } finally {
       reader.pop();
     }
@@ -119,12 +125,19 @@ export function readColorsV8(reader: BinaryReader): OcadColor[] {
 }
 
 /** Symbol index: a block of 256 file positions, as in newer files. */
-function symbolPositions(reader: BinaryReader, firstBlockPos: number): number[] {
+function symbolPositions(
+  reader: BinaryReader,
+  firstBlockPos: number,
+): number[] {
   const BLOCK_BYTES = 4 + 256 * 4;
   const positions: number[] = [];
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
-  while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= reader.length - BLOCK_BYTES &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     reader.push(blockPos);
     const next = reader.integer();
@@ -138,7 +151,10 @@ function symbolPositions(reader: BinaryReader, firstBlockPos: number): number[] 
   return positions;
 }
 
-function readSymbolV8(reader: BinaryReader, filePos: number): OcadSymbol | null {
+function readSymbolV8(
+  reader: BinaryReader,
+  filePos: number,
+): OcadSymbol | null {
   reader.push(filePos);
   try {
     reader.word(); // record length
@@ -183,12 +199,24 @@ function readSymbolV8(reader: BinaryReader, filePos: number): OcadSymbol | null 
   }
 }
 
-type BaseFields = { symNum: number; number: string; description: string; hidden: boolean };
+type BaseFields = {
+  symNum: number;
+  number: string;
+  description: string;
+  hidden: boolean;
+};
 
-function readPointSymbolV8(reader: BinaryReader, base: BaseFields): PointSymbol {
+function readPointSymbolV8(
+  reader: BinaryReader,
+  base: BaseFields,
+): PointSymbol {
   const dataSize = reader.word();
   reader.word(); // reserverat
-  return { kind: "point", ...base, elements: readSymbolElements(reader, dataSize) };
+  return {
+    kind: "point",
+    ...base,
+    elements: readSymbolElements(reader, dataSize),
+  };
 }
 
 /** The line symbol's body is unchanged since OCAD 8: the same fields in the
@@ -308,7 +336,14 @@ function readAreaSymbolV8(reader: BinaryReader, base: BaseFields): AreaSymbol {
     borderSymbolNumber: 0,
     elements,
     ...(structureMode > 0
-      ? { structure: { mode: structureMode, cellWidth, cellHeight, angleDeg: structureAngleDeg } }
+      ? {
+          structure: {
+            mode: structureMode,
+            cellWidth,
+            cellHeight,
+            angleDeg: structureAngleDeg,
+          },
+        }
       : {}),
   };
 }
@@ -333,18 +368,29 @@ function readTextSymbolV8(reader: BinaryReader, base: BaseFields): TextSymbol {
     bold: weight > 400,
     italic,
     alignmentHorizontal:
-      (alignment & 0x03) === 1 ? "center" : (alignment & 0x03) === 2 ? "right" : "left",
+      (alignment & 0x03) === 1
+        ? "center"
+        : (alignment & 0x03) === 2
+          ? "right"
+          : "left",
   };
 }
 
 /** Object index: 24 bytes per entry, and no status field; an empty slot is
  * recognised by having no symbol. */
-function objectPositions(reader: BinaryReader, firstBlockPos: number): number[] {
+function objectPositions(
+  reader: BinaryReader,
+  firstBlockPos: number,
+): number[] {
   const BLOCK_BYTES = 4 + 256 * OBJECT_INDEX_ENTRY_BYTES;
   const positions: number[] = [];
   const visited = new Set<number>();
   let blockPos = firstBlockPos;
-  while (blockPos > 0 && blockPos <= reader.length - BLOCK_BYTES && !visited.has(blockPos)) {
+  while (
+    blockPos > 0 &&
+    blockPos <= reader.length - BLOCK_BYTES &&
+    !visited.has(blockPos)
+  ) {
     visited.add(blockPos);
     reader.push(blockPos);
     const next = reader.integer();

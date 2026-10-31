@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseOcadFile } from "./parser.js";
 import { renderMapSvg } from "./render-svg.js";
-import { ALL_VERSIONS, OcdFileBuilder, type OcdVersion } from "../testing/ocd-builder.js";
+import {
+  ALL_VERSIONS,
+  OcdFileBuilder,
+  type OcdVersion,
+} from "../testing/ocd-builder.js";
 
 /** A small but complete map: two colors, a scale, one symbol of each kind
  * and one object per symbol. */
@@ -17,7 +21,12 @@ function sampleMap(version: OcdVersion) {
     })
     .addLineSymbol({ symNum: 501000, lineColor: 0, lineWidth: 35 })
     .addAreaSymbol({ symNum: 401000, fillColor: 1 })
-    .addTextSymbol({ symNum: 701000, fontName: "Arial", fontColor: 0, fontSizeTenths: 100 })
+    .addTextSymbol({
+      symNum: 701000,
+      fontName: "Arial",
+      fontColor: 0,
+      fontSizeTenths: 100,
+    })
     .addObject({ sym: 101000, otp: 1, coords: [[1234, -5678]] })
     .addObject({
       sym: 501000,
@@ -123,7 +132,9 @@ describe.each(ALL_VERSIONS)("parseOcadFile - OCAD %i layout", (version) => {
 
 describe("parseOcadFile - corrupt input", () => {
   it("rejects non-OCAD data with a clear error", () => {
-    expect(() => parseOcadFile(new ArrayBuffer(10))).toThrow(/Not an OCAD file/);
+    expect(() => parseOcadFile(new ArrayBuffer(10))).toThrow(
+      /Not an OCAD file/,
+    );
     const junk = new Uint8Array(200);
     junk[0] = 0x12;
     expect(() => parseOcadFile(junk.buffer)).toThrow(/Not an OCAD file/);
@@ -152,7 +163,12 @@ describe("parseOcadFile - corrupt input", () => {
 
   it("skips an object whose vertex count runs past the end of the file", () => {
     const buf = sampleMap(11)
-      .addObject({ sym: 501000, otp: 2, coords: [[0, 0]], nItemOverride: 0x7fffffff })
+      .addObject({
+        sym: 501000,
+        otp: 2,
+        coords: [[0, 0]],
+        nItemOverride: 0x7fffffff,
+      })
       .build();
     const map = parseOcadFile(buf);
     expect(map.objects).toHaveLength(4);
@@ -172,53 +188,56 @@ describe("parseOcadFile - corrupt input", () => {
 });
 
 describe("symbols drawn from more than one primitive", () => {
-  it.each(ALL_VERSIONS)("keeps every part of the symbol (OCAD %s)", (version) => {
-    // A tower: a crossbar and a post, two strokes in the same symbol. If the
-    // symbol's data budget is read in the wrong unit it only covers the
-    // first, and the tower loses its post without anything saying so.
-    const file = new OcdFileBuilder(version)
-      .addColor(0, "Black", [0, 0, 0, 100])
-      .addScale(15000)
-      .addPointSymbol({
-        symNum: 535000,
-        description: "Tower",
-        elements: [
-          {
-            type: 1,
-            color: 0,
-            lineWidth: 18,
-            points: [
-              [-60, 60],
-              [60, 60],
-            ],
-          },
-          {
-            type: 1,
-            color: 0,
-            lineWidth: 18,
-            points: [
-              [0, 60],
-              [0, -60],
-            ],
-          },
-        ],
-      })
-      .addObject({ sym: 535000, otp: 1, coords: [[1000, 1000]] })
-      .build();
+  it.each(ALL_VERSIONS)(
+    "keeps every part of the symbol (OCAD %s)",
+    (version) => {
+      // A tower: a crossbar and a post, two strokes in the same symbol. If the
+      // symbol's data budget is read in the wrong unit it only covers the
+      // first, and the tower loses its post without anything saying so.
+      const file = new OcdFileBuilder(version)
+        .addColor(0, "Black", [0, 0, 0, 100])
+        .addScale(15000)
+        .addPointSymbol({
+          symNum: 535000,
+          description: "Tower",
+          elements: [
+            {
+              type: 1,
+              color: 0,
+              lineWidth: 18,
+              points: [
+                [-60, 60],
+                [60, 60],
+              ],
+            },
+            {
+              type: 1,
+              color: 0,
+              lineWidth: 18,
+              points: [
+                [0, 60],
+                [0, -60],
+              ],
+            },
+          ],
+        })
+        .addObject({ sym: 535000, otp: 1, coords: [[1000, 1000]] })
+        .build();
 
-    const map = parseOcadFile(file);
-    const tower = map.symbolsByNumber.get(535000);
-    expect(tower?.kind).toBe("point");
-    const elements = tower?.kind === "point" ? tower.elements : [];
-    expect(elements).toHaveLength(2);
-    expect(elements[1]!.points.map((p) => [p.x, p.y])).toEqual([
-      [0, 60],
-      [0, -60],
-    ]);
+      const map = parseOcadFile(file);
+      const tower = map.symbolsByNumber.get(535000);
+      expect(tower?.kind).toBe("point");
+      const elements = tower?.kind === "point" ? tower.elements : [];
+      expect(elements).toHaveLength(2);
+      expect(elements[1]!.points.map((p) => [p.x, p.y])).toEqual([
+        [0, 60],
+        [0, -60],
+      ]);
 
-    // And both strokes end up in the map.
-    const { innerMarkup } = renderMapSvg(map);
-    expect(innerMarkup.match(/<path /g)).toHaveLength(2);
-    expect(innerMarkup).toContain("M 1000 -1060 L 1000 -940");
-  });
+      // And both strokes end up in the map.
+      const { innerMarkup } = renderMapSvg(map);
+      expect(innerMarkup.match(/<path /g)).toHaveLength(2);
+      expect(innerMarkup).toContain("M 1000 -1060 L 1000 -940");
+    },
+  );
 });

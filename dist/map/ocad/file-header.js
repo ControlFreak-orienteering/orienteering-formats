@@ -32,5 +32,11 @@ export function readFileHeader(reader) {
     reader.cardinal(); // reserved
     reader.cardinal(); // reserved
     reader.cardinal(); // multi-representation start block position
-    return { version, subVersion, symbolIndexBlockPos, objectIndexBlockPos, stringIndexBlockPos };
+    return {
+        version,
+        subVersion,
+        symbolIndexBlockPos,
+        objectIndexBlockPos,
+        stringIndexBlockPos,
+    };
 }

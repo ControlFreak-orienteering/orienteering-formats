@@ -44,7 +44,9 @@ function objectEntries(view, version, firstBlockPos) {
     const entries = [];
     const visited = new Set();
     let blockPos = firstBlockPos;
-    while (blockPos > 0 && blockPos <= view.byteLength - blockBytes && !visited.has(blockPos)) {
+    while (blockPos > 0 &&
+        blockPos <= view.byteLength - blockBytes &&
+        !visited.has(blockPos)) {
         visited.add(blockPos);
         const next = view.getUint32(blockPos, true);
         for (let i = 0; i < 256; i++) {
@@ -107,17 +109,19 @@ function objectExtent(view, version, pos) {
 /** How long an object's record is: the header plus the coordinates and the text. */
 function objectLength(view, version, pos) {
     if (version < 9)
-        return 32 + (view.getUint16(pos + 4, true) + view.getUint16(pos + 6, true)) * 8;
+        return (32 + (view.getUint16(pos + 4, true) + view.getUint16(pos + 6, true)) * 8);
     if (version <= 11) {
-        return 40 + (view.getUint32(pos + 8, true) + view.getUint16(pos + 12, true)) * 8;
+        return (40 + (view.getUint32(pos + 8, true) + view.getUint16(pos + 12, true)) * 8);
     }
-    return 56 + (view.getUint32(pos + 44, true) + view.getUint16(pos + 48, true)) * 8;
+    return (56 + (view.getUint32(pos + 44, true) + view.getUint16(pos + 48, true)) * 8);
 }
 function indexBlocks(view, firstBlockPos, entryBytes) {
     const blocks = [];
     const visited = new Set();
     let pos = firstBlockPos;
-    while (pos > 0 && !visited.has(pos) && pos + 4 + 256 * entryBytes <= view.byteLength) {
+    while (pos > 0 &&
+        !visited.has(pos) &&
+        pos + 4 + 256 * entryBytes <= view.byteLength) {
         visited.add(pos);
         blocks.push(pos);
         pos = view.getUint32(pos, true);
@@ -173,7 +177,10 @@ function stringRecords(view, firstBlockPos) {
             const pos = view.getUint32(at, true);
             const size = view.getInt32(at + 4, true);
             const recordType = view.getInt32(at + 8, true);
-            if (recordType > 0 && pos > 0 && size > 0 && pos + size <= view.byteLength) {
+            if (recordType > 0 &&
+                pos > 0 &&
+                size > 0 &&
+                pos + size <= view.byteLength) {
                 records.push({ at, pos, size });
             }
         }

@@ -43,7 +43,8 @@ export type OmapModelColor = {
 };
 
 /** The basic kind of a symbol. */
-export type OmapModelSymbolKind = "point" | "line" | "area" | "text" | "combined";
+export type OmapModelSymbolKind =
+  "point" | "line" | "area" | "text" | "combined";
 
 /** A symbol of the map's symbol set. */
 export type OmapModelSymbol = {
@@ -120,7 +121,9 @@ function canonical(el: Element, r: Resolver): unknown {
   const attrs: Record<string, string> = {};
   const names = Array.from(el.attributes, (a) => a.name).sort();
   const reference =
-    el.localName === "part" && !childByTag(el, "symbol") && el.hasAttribute("symbol");
+    el.localName === "part" &&
+    !childByTag(el, "symbol") &&
+    el.hasAttribute("symbol");
   for (const name of names) {
     if (isSymbol && IDENTITY_ATTRIBUTES.has(name)) continue;
     if (reference && name === "symbol") continue;
@@ -152,11 +155,16 @@ function canonical(el: Element, r: Resolver): unknown {
  */
 export function parseOmapModel(doc: Document): OmapModel {
   const colorTable = parseColors(doc);
-  const colors = [...colorTable.values()].map(
-    (c): OmapModelColor => ({ index: c.order, name: c.name, rgb: c.rgb, priority: c.order }),
-  );
+  const colors = [...colorTable.values()].map((c): OmapModelColor => ({
+    index: c.order,
+    name: c.name,
+    rgb: c.rgb,
+    priority: c.order,
+  }));
 
-  const symbolEls = findByTag(doc, "symbols").flatMap((el) => childrenByTag(el, "symbol"));
+  const symbolEls = findByTag(doc, "symbols").flatMap((el) =>
+    childrenByTag(el, "symbol"),
+  );
   const active = new Set<number>();
   const resolver: Resolver = {
     colors: colorTable,
@@ -181,7 +189,9 @@ export function parseOmapModel(doc: Document): OmapModel {
     };
   });
 
-  const parts = findByTag(doc, "parts").flatMap((el) => childrenByTag(el, "part"));
+  const parts = findByTag(doc, "parts").flatMap((el) =>
+    childrenByTag(el, "part"),
+  );
   const objects: OmapModelObject[] = [];
   parts.forEach((partEl, part) => {
     for (const objectsEl of childrenByTag(partEl, "objects")) {
