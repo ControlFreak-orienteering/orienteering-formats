@@ -63,6 +63,8 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
 - **IOF XML StartList** files (Eventor, timing programs), read into the start list
   form of the QR film, and written from it for Eventor's start list import; see
   "Course files from other programs".
+- **IOF XML ResultList** files (Eventor, MeOS, WinSplits, Livelox), written from a
+  results form of the package's own; see "Course files from other programs".
 - **Live competitions from QR codes**: create or update a competition on ControlFreak
   Live from Run course links, without a login; see "Live competitions from QR codes".
 - **Errors** are a `FormatError` with a `code`; each app turns the code into its own
@@ -347,6 +349,18 @@ lists.
   `<Event><Id>`) are the other options. Eventor matches runners without an Eventor id
   on name and club, and classes on their names, so the file's class names must be
   Eventor's. A list written here reads back the same.
+- **Writing IOF XML 3.0 ResultList** (since v0.23.0): `writeIofResultList(list, options)`
+  writes a `ResultList` (the event's `name`, `date`, `endDate` and `organiser`; classes
+  with an optional course `name`, `lengthMeters`, `climbMeters` and `numberOfControls`;
+  runners with `name`, `club`, `status` as IOF's `ResultStatus`, `position`, `time` and
+  `timeBehind` in seconds, `startTime` and `finishTime` in ms since 1970, `score` and
+  `penalty` on score courses, `splits` as control codes with seconds from the start, and
+  `card`) as the file Eventor, MeOS, WinSplits and Livelox import. Nothing is ranked or
+  worked out: places, times and statuses are written as given, classes and runners in
+  the given order, and classes without runners are left out. A split without a time is
+  `status="Missing"`; `complete: false` writes `status="Snapshot"`. Start and finish are
+  written with the offset of `options.timeZone` (an IANA name), else in UTC. `creator`
+  and `createTime` are the other options. The output validates against IOF.xsd 3.0.
 - **Purple Pen** (.ppen): `readPurplePen` gives the courses, `title` and `mapFileName`.
   Purple Pen has no positions on the earth; an app that needs them reads the named
   map's georeference with `orienteering-formats/map` and converts the millimetres. A
