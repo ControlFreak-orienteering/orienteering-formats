@@ -297,8 +297,20 @@ export interface RunLiveRow {
    * passed early, or a code that is on the course twice) does not count where it was made.
    */
   splits: (number | null)[];
-  /** On a score course: points after the penalty, else null. */
+  /**
+   * On a score course: points after the penalty, else null. Negative when the penalty is
+   * larger than the points taken, as in ControlFreak Run's own result (since v0.24.0; before
+   * that never below zero).
+   */
   points: number | null;
+  /** On a score course: the points of the controls taken, before the penalty; else null.
+   * Since v0.24.0. */
+  pointsTaken?: number | null;
+  /**
+   * On a score course: the penalty for the minutes started past the time limit, zero while
+   * running or in time; else null. Since v0.24.0.
+   */
+  penalty?: number | null;
   /** On a fixed-order course: every control taken in course order. Always true on a score course. */
   complete: boolean;
   /** When the runner was last heard from, ms since 1970. */
@@ -371,12 +383,15 @@ function rowFor(body: RunLiveBody): RunLiveRow {
   const takenInOrder = ordered.filter((t) => t !== null).length;
   const time = body.finishAt === null ? null : Math.max(0, body.finishAt - body.startAt);
   let points: number | null = null;
+  let pointsTaken: number | null = null;
+  let penalty: number | null = null;
   if (score) {
     let sum = 0;
     for (const i of firstAt.keys()) sum += controls[i]?.points ?? 0;
     const overMs = time === null ? 0 : time - score.timeLimitMinutes * 60_000;
-    const penalty = overMs > 0 ? Math.ceil(overMs / 60_000) * score.penaltyPerMinute : 0;
-    points = Math.max(0, sum - penalty);
+    pointsTaken = sum;
+    penalty = overMs > 0 ? Math.ceil(overMs / 60_000) * score.penaltyPerMinute : 0;
+    points = sum - penalty;
   }
   const lastPunch = body.punches.reduce((m, p) => Math.max(m, p.at), body.startAt);
   return {
@@ -390,6 +405,8 @@ function rowFor(body: RunLiveBody): RunLiveRow {
     taken: score ? firstAt.size : takenInOrder,
     splits: ordered.map((t) => (t === null ? null : t - body.startAt)),
     points,
+    pointsTaken,
+    penalty,
     complete: score ? true : takenInOrder === controls.length,
     lastAt: Math.max(lastPunch, body.finishAt ?? 0),
   };

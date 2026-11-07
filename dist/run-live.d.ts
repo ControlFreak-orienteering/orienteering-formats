@@ -186,8 +186,20 @@ export interface RunLiveRow {
      * passed early, or a code that is on the course twice) does not count where it was made.
      */
     splits: (number | null)[];
-    /** On a score course: points after the penalty, else null. */
+    /**
+     * On a score course: points after the penalty, else null. Negative when the penalty is
+     * larger than the points taken, as in ControlFreak Run's own result (since v0.24.0; before
+     * that never below zero).
+     */
     points: number | null;
+    /** On a score course: the points of the controls taken, before the penalty; else null.
+     * Since v0.24.0. */
+    pointsTaken?: number | null;
+    /**
+     * On a score course: the penalty for the minutes started past the time limit, zero while
+     * running or in time; else null. Since v0.24.0.
+     */
+    penalty?: number | null;
     /** On a fixed-order course: every control taken in course order. Always true on a score course. */
     complete: boolean;
     /** When the runner was last heard from, ms since 1970. */
