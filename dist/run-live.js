@@ -256,13 +256,16 @@ function rowFor(body) {
     const takenInOrder = ordered.filter((t) => t !== null).length;
     const time = body.finishAt === null ? null : Math.max(0, body.finishAt - body.startAt);
     let points = null;
+    let pointsTaken = null;
+    let penalty = null;
     if (score) {
         let sum = 0;
         for (const i of firstAt.keys())
             sum += controls[i]?.points ?? 0;
         const overMs = time === null ? 0 : time - score.timeLimitMinutes * 60_000;
-        const penalty = overMs > 0 ? Math.ceil(overMs / 60_000) * score.penaltyPerMinute : 0;
-        points = Math.max(0, sum - penalty);
+        pointsTaken = sum;
+        penalty = overMs > 0 ? Math.ceil(overMs / 60_000) * score.penaltyPerMinute : 0;
+        points = sum - penalty;
     }
     const lastPunch = body.punches.reduce((m, p) => Math.max(m, p.at), body.startAt);
     return {
@@ -276,6 +279,8 @@ function rowFor(body) {
         taken: score ? firstAt.size : takenInOrder,
         splits: ordered.map((t) => (t === null ? null : t - body.startAt)),
         points,
+        pointsTaken,
+        penalty,
         complete: score ? true : takenInOrder === controls.length,
         lastAt: Math.max(lastPunch, body.finishAt ?? 0),
     };

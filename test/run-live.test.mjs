@@ -119,9 +119,31 @@ test("standings on a score course count points less the penalty", () => {
     body("In time", [[1, 100]], 500, { course: score }),
   ]);
   assert.deepEqual(
-    c.rows.map((r) => [r.name, r.points, r.place]),
-    [["Late", 24, 1], ["In time", 20, 2]],
+    c.rows.map((r) => [r.name, r.points, r.pointsTaken, r.penalty, r.place]),
+    [["Late", 24, 30, 6, 1], ["In time", 20, 20, 0, 2]],
   );
+});
+
+test("a penalty larger than the points taken gives negative points, as in Run", () => {
+  const score = {
+    name: "Poäng",
+    controls: [{ code: 31, points: 10 }, { code: 32, points: 20 }],
+    score: { timeLimitMinutes: 10, penaltyPerMinute: 5 },
+  };
+  const [c] = runLiveStandings([
+    body("Very late", [[0, 60]], 15 * 60, { course: score }),
+    body("Out", [[0, 60], [1, 900]], null, { course: score }),
+  ]);
+  const late = c.rows.find((r) => r.name === "Very late");
+  assert.deepEqual([late.points, late.pointsTaken, late.penalty], [-15, 10, 25]);
+  // Ute räknas inget avdrag; det vet bara den som vet klockan.
+  const out = c.rows.find((r) => r.name === "Out");
+  assert.deepEqual([out.points, out.pointsTaken, out.penalty], [30, 30, 0]);
+});
+
+test("a fixed-order course has no points, points taken or penalty", () => {
+  const [c] = runLiveStandings([body("Anna", [[0, 100]], 400)]);
+  assert.deepEqual([c.rows[0].points, c.rows[0].pointsTaken, c.rows[0].penalty], [null, null, null]);
 });
 
 test("the open address is built from the site's origin", () => {
