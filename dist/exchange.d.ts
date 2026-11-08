@@ -118,6 +118,13 @@ export type ExchangeCourse = {
     printScale?: number;
     /** Points per control id, for score courses. */
     scores?: Record<string, number>;
+    /**
+     * Time limit of a score course in whole minutes; 0 or absent means no time limit.
+     * Since v0.25.0.
+     */
+    timeLimitMinutes?: number;
+    /** Points taken off a score course per started minute over the time limit. Since v0.25.0. */
+    penaltyPerMinute?: number;
     /** Forking variations. Absent when the course is not forked. */
     variations?: ExchangeVariation[];
 };

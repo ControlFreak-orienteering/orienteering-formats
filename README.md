@@ -474,6 +474,8 @@ type CourseExchange = {
     climbMeters?: number;
     printScale?: number;
     scores?: Record<string, number>;  // points per control id (score courses)
+    timeLimitMinutes?: number;      // score courses: whole minutes, 0 = no limit (v0.25.0)
+    penaltyPerMinute?: number;      // score courses: points off per started minute over (v0.25.0)
     variations?: { code: string; controls: string[]; lengthMeters?: number }[];
   }[];
 };

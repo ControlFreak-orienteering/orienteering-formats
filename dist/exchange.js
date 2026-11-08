@@ -23,6 +23,10 @@ const nonNegative = (v) => {
     const n = finite(v);
     return n !== undefined && n >= 0 ? n : undefined;
 };
+const count = (v) => {
+    const n = nonNegative(v);
+    return n !== undefined && Number.isInteger(n) ? n : undefined;
+};
 const positive = (v) => {
     const n = finite(v);
     return n !== undefined && n > 0 ? n : undefined;
@@ -99,6 +103,8 @@ function parseCourse(raw, known) {
     const lengthMeters = nonNegative(raw["lengthMeters"]);
     const climbMeters = nonNegative(raw["climbMeters"]);
     const printScale = positive(raw["printScale"]);
+    const timeLimitMinutes = count(raw["timeLimitMinutes"]);
+    const penaltyPerMinute = count(raw["penaltyPerMinute"]);
     let scores;
     if (isObj(raw["scores"])) {
         for (const [controlId, points] of Object.entries(raw["scores"])) {
@@ -135,6 +141,8 @@ function parseCourse(raw, known) {
         ...(climbMeters !== undefined ? { climbMeters } : {}),
         ...(printScale !== undefined ? { printScale } : {}),
         ...(scores ? { scores } : {}),
+        ...(timeLimitMinutes !== undefined ? { timeLimitMinutes } : {}),
+        ...(penaltyPerMinute !== undefined ? { penaltyPerMinute } : {}),
         ...(variations ? { variations } : {}),
     };
 }
