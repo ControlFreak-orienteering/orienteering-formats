@@ -141,6 +141,16 @@ test("a penalty larger than the points taken gives negative points, as in Run", 
   assert.deepEqual([out.points, out.pointsTaken, out.penalty], [30, 30, 0]);
 });
 
+test("a score course without a time limit gives no penalty, as in Run", () => {
+  const score = {
+    name: "Poäng",
+    controls: [{ code: 31, points: 10 }],
+    score: { timeLimitMinutes: 0, penaltyPerMinute: 5 },
+  };
+  const [c] = runLiveStandings([body("Slow", [[0, 60]], 90 * 60, { course: score })]);
+  assert.deepEqual([c.rows[0].points, c.rows[0].pointsTaken, c.rows[0].penalty], [10, 10, 0]);
+});
+
 test("a fixed-order course has no points, points taken or penalty", () => {
   const [c] = runLiveStandings([body("Anna", [[0, 100]], 400)]);
   assert.deepEqual([c.rows[0].points, c.rows[0].pointsTaken, c.rows[0].penalty], [null, null, null]);
