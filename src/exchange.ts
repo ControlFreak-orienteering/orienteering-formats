@@ -122,6 +122,13 @@ export type ExchangeCourse = {
   printScale?: number;
   /** Points per control id, for score courses. */
   scores?: Record<string, number>;
+  /**
+   * Time limit of a score course in whole minutes; 0 or absent means no time limit.
+   * Since v0.25.0.
+   */
+  timeLimitMinutes?: number;
+  /** Points taken off a score course per started minute over the time limit. Since v0.25.0. */
+  penaltyPerMinute?: number;
   /** Forking variations. Absent when the course is not forked. */
   variations?: ExchangeVariation[];
 };
@@ -153,6 +160,10 @@ const finite = (v: unknown): number | undefined =>
 const nonNegative = (v: unknown): number | undefined => {
   const n = finite(v);
   return n !== undefined && n >= 0 ? n : undefined;
+};
+const count = (v: unknown): number | undefined => {
+  const n = nonNegative(v);
+  return n !== undefined && Number.isInteger(n) ? n : undefined;
 };
 const positive = (v: unknown): number | undefined => {
   const n = finite(v);
@@ -233,6 +244,8 @@ function parseCourse(raw: unknown, known: Set<string>): ExchangeCourse | null {
   const lengthMeters = nonNegative(raw["lengthMeters"]);
   const climbMeters = nonNegative(raw["climbMeters"]);
   const printScale = positive(raw["printScale"]);
+  const timeLimitMinutes = count(raw["timeLimitMinutes"]);
+  const penaltyPerMinute = count(raw["penaltyPerMinute"]);
 
   let scores: Record<string, number> | undefined;
   if (isObj(raw["scores"])) {
@@ -269,6 +282,8 @@ function parseCourse(raw: unknown, known: Set<string>): ExchangeCourse | null {
     ...(climbMeters !== undefined ? { climbMeters } : {}),
     ...(printScale !== undefined ? { printScale } : {}),
     ...(scores ? { scores } : {}),
+    ...(timeLimitMinutes !== undefined ? { timeLimitMinutes } : {}),
+    ...(penaltyPerMinute !== undefined ? { penaltyPerMinute } : {}),
     ...(variations ? { variations } : {}),
   };
 }
