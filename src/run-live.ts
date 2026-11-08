@@ -388,7 +388,9 @@ function rowFor(body: RunLiveBody): RunLiveRow {
   if (score) {
     let sum = 0;
     for (const i of firstAt.keys()) sum += controls[i]?.points ?? 0;
-    const overMs = time === null ? 0 : time - score.timeLimitMinutes * 60_000;
+    // Tidsgränsen 0 är ingen tidsgräns, som i Run: då dras inget av.
+    const overMs =
+      time === null || score.timeLimitMinutes === 0 ? 0 : time - score.timeLimitMinutes * 60_000;
     pointsTaken = sum;
     penalty = overMs > 0 ? Math.ceil(overMs / 60_000) * score.penaltyPerMinute : 0;
     points = sum - penalty;
