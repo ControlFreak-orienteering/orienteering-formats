@@ -13,6 +13,7 @@
  * - OpenOrienteering Mapper: 1/1000 mm on the printed map, Y already pointing down.
  */
 import { type MapGeoreference } from "./georeference.js";
+import type { ParsedOcadMap } from "./ocad/types.js";
 /** The map formats this package reads. */
 export type MapFileFormat = "ocad" | "omap";
 /**
@@ -82,6 +83,19 @@ export declare function mapFileFormat(fileName: string): MapFileFormat | null;
  * @throws MapError when the file cannot be read.
  */
 export declare function readMapFile(bytes: ArrayBuffer | Uint8Array, fileName: string, options?: ReadMapOptions): MapDrawing;
+/** Where a map lies and how big it is, without the drawing: see `readMapPlacement`. */
+export type MapPlacement = Omit<MapDrawing, "innerMarkup" | "viewBox" | "warnings">;
+/**
+ * The scale and georeference of a map file, as `readMapFile` gives them, without
+ * drawing it. For an OCAD file only the header and the settings are read, so a large
+ * map takes no time; an OpenOrienteering Mapper file is read whole.
+ *
+ * @param bytes - The file's content.
+ * @param fileName - The file's name; its ending says the format.
+ * @param options - See `ReadMapOptions`.
+ * @throws MapError when the file cannot be read.
+ */
+export declare function readMapPlacement(bytes: ArrayBuffer | Uint8Array, fileName: string, options?: ReadMapOptions): MapPlacement;
 /**
  * The whole map as a standalone SVG document, e.g. to show in an `<img>` or to parse
  * into an element.
@@ -89,3 +103,11 @@ export declare function readMapFile(bytes: ArrayBuffer | Uint8Array, fileName: s
  * @param drawing - A drawing from `readMapFile`.
  */
 export declare function mapSvgMarkup(drawing: Pick<MapDrawing, "innerMarkup" | "viewBox">): string;
+/**
+ * The OCAD file's georeference, if it can be used.
+ *
+ * A map that was never placed has the section with `r=0` and no grid, and a map can lie
+ * in a grid this package does not convert (see `projectionForOcadGrid`). Both give
+ * `null`.
+ */
+export declare function ocadGeoreference(georef: ParsedOcadMap["georef"]): MapGeoreference | null;

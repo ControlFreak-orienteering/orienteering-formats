@@ -22,9 +22,9 @@ export function readParameterStrings(reader, firstBlockPos) {
             const pos = reader.integer();
             const size = reader.integer();
             const recordType = reader.integer();
-            reader.integer(); // owning object index, not needed here
+            const objectIndex = reader.integer();
             if (recordType > 0 && pos > 0 && pos < reader.length)
-                entries.push({ pos, size, recordType });
+                entries.push({ pos, size, recordType, objectIndex });
         }
         reader.pop();
         for (const entry of entries) {
@@ -41,7 +41,7 @@ export function readParameterStrings(reader, firstBlockPos) {
             finally {
                 reader.pop();
             }
-            const parsed = parseParameterString(entry.recordType, text);
+            const parsed = parseParameterString(entry.recordType, text, entry.objectIndex);
             const list = byType.get(entry.recordType) ?? [];
             list.push(parsed);
             byType.set(entry.recordType, list);
@@ -50,14 +50,18 @@ export function readParameterStrings(reader, firstBlockPos) {
     }
     return byType;
 }
-function parseParameterString(recordType, text) {
-    const parts = text.split("\t");
+/**
+ * Splits one parameter string into its subject and lettered parts.
+ *
+ * @param recordType - The string's record type.
+ * @param text - The string as stored, tab-separated.
+ * @param objectIndex - The object it belongs to (0 for none).
+ */
+export function parseParameterString(recordType, text, objectIndex = 0) {
+    const all = text.split("\t");
+    const parts = all.slice(1).filter((part) => part !== "");
     const fields = new Map();
-    for (let i = 1; i < parts.length; i++) {
-        const part = parts[i];
-        if (!part)
-            continue;
+    for (const part of parts)
         fields.set(part.charAt(0), part.slice(1));
-    }
-    return { recordType, subject: parts[0] ?? "", fields };
+    return { recordType, subject: all[0] ?? "", fields, parts, objectIndex };
 }

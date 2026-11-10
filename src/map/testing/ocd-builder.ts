@@ -41,6 +41,11 @@ export interface ObjectSpec {
   status?: 1 | 2 | 3;
   /** Override the coordinate count written to the header (for corrupt-file tests). */
   nItemOverride?: number;
+  /**
+   * The object string, written by OCAD 12 and later only (course-setting objects carry
+   * their control there, e.g. `"0031\tYc\ta31"`).
+   */
+  objectString?: string;
 }
 
 class ByteWriter {
@@ -144,7 +149,7 @@ type SymbolRecord = { symNum: number; body: (w: ByteWriter) => void };
  * new OcdFileBuilder(2018).addColor(0, "Black", [0, 0, 0, 100]).addScale(10000).build();
  */
 export class OcdFileBuilder {
-  private strings: { recordType: number; text: string }[] = [];
+  private strings: { recordType: number; text: string; objectIndex: number }[] = [];
   private symbols: SymbolRecord[] = [];
   private objects: ObjectSpec[] = [];
   /** Test hooks: make an index block's "next block" pointer point at itself. */
@@ -153,8 +158,12 @@ export class OcdFileBuilder {
 
   constructor(readonly version: OcdVersion) {}
 
-  addString(recordType: number, text: string): this {
-    this.strings.push({ recordType, text });
+  /**
+   * Adds a parameter string. `objectIndex` is the object it belongs to, numbered from 1
+   * in the order the objects are added (0 for none).
+   */
+  addString(recordType: number, text: string, objectIndex = 0): this {
+    this.strings.push({ recordType, text, objectIndex });
     return this;
   }
 
@@ -332,6 +341,9 @@ export class OcdFileBuilder {
     // nText counts 8-byte slots; leave room for the NUL terminator.
     const nText = text ? Math.ceil((text.length + 1) / 4) : 0;
     const nItem = o.nItemOverride ?? o.coords.length;
+    const objectString = this.version >= 12 ? (o.objectString ?? "") : "";
+    // Counted in 4-byte units, like OCAD's; room for the NUL terminator.
+    const nObjectString = objectString ? Math.ceil(((objectString.length + 1) * 2) / 4) : 0;
     w.integer(o.sym);
     w.byte(o.otp);
     w.byte(0); // unicode/customer
@@ -359,13 +371,14 @@ export class OcdFileBuilder {
       w.double(0); // modification date
       w.cardinal(nItem);
       w.word(nText);
-      w.word(0); // object string length
+      w.word(nObjectString); // object string length
       w.word(0); // database string length
-      w.byte(0); // object string type
+      w.byte(objectString ? 1 : 0); // object string type
       w.byte(0);
     }
     for (const c of o.coords) w.coord(c);
     if (nText > 0) w.utf16Fixed(text, nText * 4);
+    if (nObjectString > 0) w.utf16Fixed(objectString, nObjectString * 2);
   }
 
   build(): ArrayBuffer {
@@ -405,6 +418,7 @@ export class OcdFileBuilder {
       w.patchCardinal(at, pos);
       w.patchCardinal(at + 4, bytes.length + 1);
       w.patchCardinal(at + 8, s.recordType);
+      w.patchCardinal(at + 12, s.objectIndex);
     });
 
     // --- symbols

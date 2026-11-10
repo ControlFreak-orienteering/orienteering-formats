@@ -36,6 +36,11 @@ export interface ObjectSpec {
     status?: 1 | 2 | 3;
     /** Override the coordinate count written to the header (for corrupt-file tests). */
     nItemOverride?: number;
+    /**
+     * The object string, written by OCAD 12 and later only (course-setting objects carry
+     * their control there, e.g. `"0031\tYc\ta31"`).
+     */
+    objectString?: string;
 }
 /**
  * Builds an .ocd file in memory, for tests: add colours, symbols and
@@ -56,7 +61,11 @@ export declare class OcdFileBuilder {
         objects?: boolean;
     };
     constructor(version: OcdVersion);
-    addString(recordType: number, text: string): this;
+    /**
+     * Adds a parameter string. `objectIndex` is the object it belongs to, numbered from 1
+     * in the order the objects are added (0 for none).
+     */
+    addString(recordType: number, text: string, objectIndex?: number): this;
     /** Convenience: a type-9 color record. Colors are listed front-most first. */
     addColor(number: number, name: string, cmyk: [number, number, number, number]): this;
     addScale(mapScale: number): this;

@@ -9,12 +9,23 @@ export interface ParameterString {
   recordType: number;
   subject: string;
   fields: Map<string, string>;
+  /**
+   * The parts after the subject, in order and with their letters, e.g. `["sS1", "c31",
+   * "fM1"]`. `fields` keeps only the last part of each letter; a course needs them all.
+   */
+  parts: string[];
+  /**
+   * The object the string belongs to, numbered from 1 in the object index (0 for none).
+   * A course-setting control string names the object that marks the control.
+   */
+  objectIndex: number;
 }
 
 interface StringIndexEntry {
   pos: number;
   size: number;
   recordType: number;
+  objectIndex: number;
 }
 
 /**
@@ -47,9 +58,9 @@ export function readParameterStrings(
       const pos = reader.integer();
       const size = reader.integer();
       const recordType = reader.integer();
-      reader.integer(); // owning object index, not needed here
+      const objectIndex = reader.integer();
       if (recordType > 0 && pos > 0 && pos < reader.length)
-        entries.push({ pos, size, recordType });
+        entries.push({ pos, size, recordType, objectIndex });
     }
     reader.pop();
 
@@ -65,7 +76,7 @@ export function readParameterStrings(
       } finally {
         reader.pop();
       }
-      const parsed = parseParameterString(entry.recordType, text);
+      const parsed = parseParameterString(entry.recordType, text, entry.objectIndex);
       const list = byType.get(entry.recordType) ?? [];
       list.push(parsed);
       byType.set(entry.recordType, list);
@@ -77,16 +88,21 @@ export function readParameterStrings(
   return byType;
 }
 
-function parseParameterString(
+/**
+ * Splits one parameter string into its subject and lettered parts.
+ *
+ * @param recordType - The string's record type.
+ * @param text - The string as stored, tab-separated.
+ * @param objectIndex - The object it belongs to (0 for none).
+ */
+export function parseParameterString(
   recordType: number,
   text: string,
+  objectIndex = 0,
 ): ParameterString {
-  const parts = text.split("\t");
+  const all = text.split("\t");
+  const parts = all.slice(1).filter((part) => part !== "");
   const fields = new Map<string, string>();
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part) continue;
-    fields.set(part.charAt(0), part.slice(1));
-  }
-  return { recordType, subject: parts[0] ?? "", fields };
+  for (const part of parts) fields.set(part.charAt(0), part.slice(1));
+  return { recordType, subject: all[0] ?? "", fields, parts, objectIndex };
 }
