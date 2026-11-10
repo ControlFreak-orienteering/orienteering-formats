@@ -101,6 +101,13 @@ export interface RunLiveBody {
     punches: RunLivePunch[];
     /** The finish, ms since 1970, or null while the runner is out. */
     finishAt: number | null;
+    /**
+     * True when the runner ended the run themselves instead of reaching the finish; then
+     * `finishAt` is when they ended it. The time counts, but the run is never complete.
+     * Absent (or false) for a run that reached the finish, and from senders that do not
+     * report it. Optional field within version 1 (since v0.27.0).
+     */
+    manualFinish?: boolean;
     /** When the phone made the body, ISO 8601. */
     generatedAt: string;
     /**
@@ -200,8 +207,16 @@ export interface RunLiveRow {
      * running or in time; else null. Since v0.24.0.
      */
     penalty?: number | null;
-    /** On a fixed-order course: every control taken in course order. Always true on a score course. */
+    /**
+     * On a fixed-order course: every control taken in course order. Always true on a score
+     * course. False when the runner ended the run themselves ({@link RunLiveRow.manualFinish}).
+     */
     complete: boolean;
+    /**
+     * True when the runner ended the run themselves instead of reaching the finish: `time` is
+     * to when they ended it, and the run is not complete. Absent otherwise. Since v0.27.0.
+     */
+    manualFinish?: true;
     /** When the runner was last heard from, ms since 1970. */
     lastAt: number;
 }
