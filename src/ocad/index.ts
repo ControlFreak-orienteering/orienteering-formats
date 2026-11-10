@@ -3,9 +3,11 @@
  * ControlFreak file's exchange section (see `CourseSet`).
  */
 export {
+  iofDescriptionRef,
   looksLikeOcad,
   readOcadCourses,
   type OcadCourses,
+  type OcadDescription,
   type OcadSpecial,
   type OcadSpecialKind,
 } from "./courses.js";
