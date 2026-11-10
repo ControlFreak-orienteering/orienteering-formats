@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FormatError } from "../errors.js";
 import { mapToWgs84 } from "../map/georeference.js";
 import { OcdFileBuilder, type OcdVersion } from "../map/testing/ocd-builder.js";
-import { looksLikeOcad, readOcadCourses } from "./courses.js";
+import { iofDescriptionRef, looksLikeOcad, readOcadCourses } from "./courses.js";
 
 const START = 701000;
 const CONTROL = 702000;
@@ -155,6 +155,37 @@ describe("readOcadCourses", () => {
       expect(readOcadCourses(b.build()).courseSymbols).toEqual({ controlDiameterMm: 6, lineWidthMm: 0.35 });
     });
   }
+
+  it("reads the control descriptions as IOF 2004 symbols", () => {
+    const b = new OcdFileBuilder(11);
+    b.addObject(point(START, 0, 0));
+    b.addObject(point(CONTROL, 30, 40));
+    b.addObject(point(CONTROL, 60, 0));
+    b.addString(1, "S1\tYs\td5.001", 1);
+    b.addString(1, "31\tYc\td1.009\tg11.101\te8.001", 2);
+    b.addString(1, "32\tYc\tc0.205\td5.002\tf10.002\tg11.502", 3);
+    b.addString(2, "A\tsS1\tc31\tc32");
+    expect(readOcadCourses(b.build()).descriptions).toEqual({
+      "31": { D: "1.9", E: "8.1", G: "11.1N" },
+      "32": { C: "0.2NW", D: "5.2", F: "10.2", G: "11.5W" },
+    });
+  });
+
+  it("turns OCAD's description codes into IOF 2004 references", () => {
+    // The names are those of OCAD's own description symbols.
+    expect(iofDescriptionRef("1.009")).toBe("1.9"); // Höjd
+    expect(iofDescriptionRef("11.011")).toBe("11.11"); // Uppe på
+    expect(iofDescriptionRef("11.015")).toBe("11.15"); // Mellan
+    expect(iofDescriptionRef("11.101")).toBe("11.1N"); // Norra sidan
+    expect(iofDescriptionRef("11.141")).toBe("11.14N"); // Norra foten
+    expect(iofDescriptionRef("11.408")).toBe("11.4NE"); // I nordöstra hörnet
+    expect(iofDescriptionRef("0.104")).toBe("0.1E"); // Östra
+    expect(iofDescriptionRef("0.003")).toBe("0.3"); // Övre
+    expect(iofDescriptionRef("12.001")).toBe("12.1"); // Sjukvård
+    expect(iofDescriptionRef("0.000")).toBeNull();
+    expect(iofDescriptionRef("11.109")).toBeNull();
+    expect(iofDescriptionRef("text")).toBeNull();
+  });
 
   it("refuses a map without courses as empty", () => {
     const b = new OcdFileBuilder(11).addScale(10000);

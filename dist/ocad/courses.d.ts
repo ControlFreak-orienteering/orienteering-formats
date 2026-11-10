@@ -98,7 +98,25 @@ export type OcadCourses = CourseSet & {
         controlDiameterMm?: number;
         lineWidthMm?: number;
     };
+    /**
+     * The control descriptions, by point id: per column (C to H) the IOF 2004 symbol,
+     * written as Purple Pen writes it, e.g. `{ D: "1.9", G: "11.1N" }`. Only points with a
+     * description are listed. See `iofDescriptionRef` for how OCAD's codes are read.
+     */
+    descriptions?: Record<string, OcadDescription>;
 };
+/** One control's description: the IOF 2004 symbol per column, see `OcadCourses.descriptions`. */
+export type OcadDescription = Partial<Record<"C" | "D" | "E" | "F" | "G" | "H", string>>;
+/**
+ * An OCAD description code as an IOF 2004 symbol reference, or null for a code that is
+ * not one. OCAD writes the symbol as a group and a three-digit number, the numbers of
+ * its own description symbols: below 100 the number is the symbol in the group
+ * (`1.009` is 1.9, hill; `11.011` is 11.11, top). From 100 the last digit is a
+ * direction, 1 to 8 for N, W, S, E, NW, SW, SE and NE, and the digits before it the
+ * symbol, without a trailing zero (`11.101` is 11.1N, north side; `11.141` is 11.14N,
+ * north foot; `0.205` is 0.2NW).
+ */
+export declare function iofDescriptionRef(code: string): string | null;
 /** Whether the bytes look like an OCAD file (checks the magic number only). */
 export declare function looksLikeOcad(bytes: Uint8Array): boolean;
 /**

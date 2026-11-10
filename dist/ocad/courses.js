@@ -40,6 +40,47 @@ import { readSymbol, readSymbolIndex } from "../map/ocad/symbols.js";
 import { readGeoReference } from "../map/ocad/georef.js";
 import { parseParameterString, readParameterStrings, } from "../map/ocad/parameter-strings.js";
 import { ocadGeoreference } from "../map/read-map.js";
+/** The eight directions in the order OCAD numbers them, 1 to 8. */
+const DIRECTIONS = ["N", "W", "S", "E", "NW", "SW", "SE", "NE"];
+/**
+ * An OCAD description code as an IOF 2004 symbol reference, or null for a code that is
+ * not one. OCAD writes the symbol as a group and a three-digit number, the numbers of
+ * its own description symbols: below 100 the number is the symbol in the group
+ * (`1.009` is 1.9, hill; `11.011` is 11.11, top). From 100 the last digit is a
+ * direction, 1 to 8 for N, W, S, E, NW, SW, SE and NE, and the digits before it the
+ * symbol, without a trailing zero (`11.101` is 11.1N, north side; `11.141` is 11.14N,
+ * north foot; `0.205` is 0.2NW).
+ */
+export function iofDescriptionRef(code) {
+    const m = /^(\d{1,2})\.(\d{3})$/.exec(code.trim());
+    if (!m)
+        return null;
+    const group = Number(m[1]);
+    const number = Number(m[2]);
+    if (number === 0)
+        return null;
+    if (number < 100)
+        return `${group}.${number}`;
+    const direction = DIRECTIONS[(number % 10) - 1];
+    if (!direction)
+        return null;
+    const tens = Math.trunc(number / 10);
+    const symbol = tens % 10 === 0 ? tens / 10 : tens;
+    return `${group}.${symbol}${direction}`;
+}
+/** The columns a control string can describe, by their letters in the string. */
+const DESCRIPTION_COLUMNS = ["c", "d", "e", "f", "g", "h"];
+/** The description in a control string, or undefined when it has none. */
+function descriptionOf(s) {
+    const out = {};
+    for (const letter of DESCRIPTION_COLUMNS) {
+        const value = s.fields.get(letter);
+        const ref = value === undefined ? null : iofDescriptionRef(value);
+        if (ref)
+            out[letter.toUpperCase()] = ref;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+}
 /** OCAD's course-setting symbols as special kinds, by symbol number over 1000. */
 const SPECIAL_SYMBOLS = {
     707: "boundary",
@@ -90,7 +131,8 @@ function controlOf(s, objectIndex) {
     const code = (s.fields.get("a") ?? s.subject).trim();
     if (!kind || !code)
         return null;
-    return { code, kind, objectIndex };
+    const description = kind === "control" ? descriptionOf(s) : undefined;
+    return { code, kind, objectIndex, ...(description ? { description } : {}) };
 }
 /**
  * Reads an OCAD course-setting file.
@@ -139,6 +181,7 @@ export function readOcadCourses(bytes) {
     }
     // One point per code, placed where its object is; the first string for a code wins.
     const byCode = new Map();
+    const descriptions = {};
     for (const c of controlStrings) {
         if (byCode.has(c.code))
             continue;
@@ -146,6 +189,8 @@ export function readOcadCourses(bytes) {
         if (!at)
             continue;
         const number = /^\d+$/.test(c.code) ? Number(c.code) : undefined;
+        if (c.description)
+            descriptions[c.code] = c.description;
         byCode.set(c.code, {
             id: c.code,
             kind: c.kind,
@@ -224,6 +269,7 @@ export function readOcadCourses(bytes) {
         ...(printArea ? { printArea } : {}),
         ...(cell !== undefined && cell > 0 ? { descriptionCellMm: cell } : {}),
         ...(courseSymbols ? { courseSymbols } : {}),
+        ...(Object.keys(descriptions).length > 0 ? { descriptions } : {}),
         specials,
         ...(scale
             ? {

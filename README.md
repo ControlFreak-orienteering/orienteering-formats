@@ -387,7 +387,9 @@ lists.
   course and event name as `field`), each on all courses or on `courses`; `printScale`,
   `printArea` (the print window) and `descriptionCellMm` come from the file's print and
   course-setting settings, and `courseSymbols` gives the control circle's and course
-  line's sizes in millimetres on the map. Forked and relay courses are not
+  line's sizes in millimetres on the map. `descriptions` (since v0.28.0) has the control descriptions
+  as IOF 2004 symbols per column, as Purple Pen writes them (`{ D: "1.9", G: "11.1N" }`);
+  `iofDescriptionRef` turns one of OCAD's codes (`11.101`) into such a symbol. Forked and relay courses are not
   read, nor OCAD's stored climb and length; lengths are along straight legs. An
   ordinary map, or a course file from OCAD 8 or 9, is refused as `empty`;
   `looksLikeOcad` recognises the file by its first bytes.
