@@ -13,6 +13,10 @@
  * - OpenOrienteering Mapper: 1/1000 mm on the printed map, Y already pointing down.
  */
 import { projectionForOcadGrid } from "./georeference.js";
+import { BinaryReader } from "./ocad/binary-reader.js";
+import { readFileHeader } from "./ocad/file-header.js";
+import { readGeoReference } from "./ocad/georef.js";
+import { readParameterStrings } from "./ocad/parameter-strings.js";
 import { parseOcadFile } from "./ocad/parser.js";
 import { renderMapSvg } from "./ocad/render-svg.js";
 import { renderOmap } from "./omap.js";
@@ -59,6 +63,51 @@ export function readMapFile(bytes, fileName, options = {}) {
         throw new MapError("unsupported-file");
     const buffer = toArrayBuffer(bytes);
     return format === "ocad" ? readOcad(buffer) : readOmap(buffer, options);
+}
+/**
+ * The scale and georeference of a map file, as `readMapFile` gives them, without
+ * drawing it. For an OCAD file only the header and the settings are read, so a large
+ * map takes no time; an OpenOrienteering Mapper file is read whole.
+ *
+ * @param bytes - The file's content.
+ * @param fileName - The file's name; its ending says the format.
+ * @param options - See `ReadMapOptions`.
+ * @throws MapError when the file cannot be read.
+ */
+export function readMapPlacement(bytes, fileName, options = {}) {
+    const format = mapFileFormat(fileName);
+    if (!format)
+        throw new MapError("unsupported-file");
+    const buffer = toArrayBuffer(bytes);
+    if (format === "omap") {
+        const { format: f, scale, scaleFromFile, metersPerUnit, georef } = readOmap(buffer, options);
+        return { format: f, scale, scaleFromFile, metersPerUnit, georef };
+    }
+    let georef;
+    try {
+        const reader = new BinaryReader(buffer);
+        const header = readFileHeader(reader);
+        if (header.version < 8 || header.version > 2018 || header.version === 9) {
+            throw new MapError("ocad-version");
+        }
+        georef = readGeoReference(readParameterStrings(reader, header.stringIndexBlockPos));
+    }
+    catch (e) {
+        if (e instanceof MapError)
+            throw e;
+        const message = e instanceof Error ? e.message : "";
+        throw new MapError(message.includes("Not an OCAD file") ? "not-ocad" : "ocad-unreadable");
+    }
+    const rawScale = georef?.mapScale ?? 0;
+    const scaleFromFile = validScale(rawScale);
+    const scale = scaleFromFile ? rawScale : FALLBACK_SCALE;
+    return {
+        format: "ocad",
+        scale,
+        scaleFromFile,
+        metersPerUnit: scale / 100_000,
+        georef: ocadGeoreference(georef),
+    };
 }
 /**
  * The whole map as a standalone SVG document, e.g. to show in an `<img>` or to parse
@@ -111,7 +160,7 @@ function readOcad(buffer) {
  * in a grid this package does not convert (see `projectionForOcadGrid`). Both give
  * `null`.
  */
-function ocadGeoreference(georef) {
+export function ocadGeoreference(georef) {
     if (!georef || !georef.realWorldCoords)
         return null;
     const projection = projectionForOcadGrid(georef.gridAndZone);

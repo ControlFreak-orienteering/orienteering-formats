@@ -9,7 +9,7 @@
  * Most apps need only `readMapFile`; the lower-level readers are exported for apps that
  * work with the parsed map itself (as ControlFreak does).
  */
-export { MapError, mapFileFormat, mapSvgMarkup, readMapFile, } from "./read-map.js";
+export { MapError, mapFileFormat, mapSvgMarkup, readMapFile, readMapPlacement, } from "./read-map.js";
 export { mapToWgs84, projectForTest, projectionForEpsg, projectionForOcadGrid, projectionFromProj4, unproject, utmProjection, wgs84ToMap, } from "./georeference.js";
 export { cmykToRgb } from "./ocad/colors.js";
 export { cropOcad, OcadCropError } from "./ocad/crop.js";

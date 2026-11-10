@@ -6,6 +6,7 @@ import {
   mapFileFormat,
   mapSvgMarkup,
   readMapFile,
+  readMapPlacement,
 } from "./read-map.js";
 import { OcdFileBuilder } from "./testing/ocd-builder.js";
 
@@ -129,5 +130,31 @@ describe("readMapFile", () => {
         },
       }),
     ).toThrow(expect.objectContaining({ code: "omap-unreadable" }));
+  });
+});
+
+describe("readMapPlacement", () => {
+  it("gives the same scale and georeference as readMapFile, without drawing", () => {
+    for (const [bytes, name] of [
+      [ocadMap(), "Kantorp.ocd"],
+      [new TextEncoder().encode(OMAP), "Kantorp.omap"],
+    ] as const) {
+      const { innerMarkup: _m, viewBox: _v, warnings: _w, ...drawn } = readMapFile(bytes, name, { parseXml });
+      expect(readMapPlacement(bytes, name, { parseXml })).toEqual(drawn);
+    }
+  });
+
+  it("reads an OCAD map's georeference", () => {
+    const map = new OcdFileBuilder(12)
+      .addString(1039, "\tm15000\tx611000\ty6795000\ta6\tr1\ti13002")
+      .build();
+    const placement = readMapPlacement(map, "Söderhamn.ocd");
+    expect(placement.scale).toBe(15000);
+    expect(placement.georef).toMatchObject({ easting: 611000, northing: 6795000, grivationDeg: 6 });
+  });
+
+  it("refuses what it cannot read with a MapError", () => {
+    expect(() => readMapPlacement(new Uint8Array([1, 2, 3]), "x.ocd")).toThrow(MapError);
+    expect(() => readMapPlacement(new Uint8Array([1, 2, 3]), "x.pdf")).toThrow(MapError);
   });
 });

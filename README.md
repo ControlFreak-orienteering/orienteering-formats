@@ -57,7 +57,7 @@ development tools. It uses `CompressionStream`, `DecompressionStream`, `Blob`,
 - **`.cfproj`**: a project as indented JSON, without the map. See `src/cfproj.ts`.
 - **`.cfpack`**: the same JSON as a header, followed by the map file, in one binary
   file. The byte layout is documented in `src/cfpack.ts`.
-- **IOF XML CourseData and Purple Pen** course files, read into the same form as the
+- **IOF XML CourseData, Purple Pen and OCAD** course files, read into the same form as the
   exchange section, and IOF XML CourseData written from it; see "Course files from
   other programs".
 - **IOF XML StartList** files (Eventor, timing programs), read into the start list
@@ -307,8 +307,8 @@ Printed QR codes live for months, so the link format only ever grows:
 
 ## Course files from other programs
 
-`orienteering-formats/iof` and `orienteering-formats/purple-pen` read the course files
-other programs write, and give the courses in the same form as the exchange section
+`orienteering-formats/iof`, `orienteering-formats/purple-pen` and
+`orienteering-formats/ocad` read the course files other programs write, and give the courses in the same form as the exchange section
 below (a `CourseSet`: a `CourseExchange` whose courses may also carry `family`,
 `classNames`, `partlyRead` and `tapedRoutes`), so an app reads every course file the
 same way. `orienteering-formats/iof` also writes that form as IOF XML, and reads and writes start
@@ -372,6 +372,22 @@ lists.
   finish with a `<code>` gets it as its `label` ("S" or "M" without one). A file with
   no courses is refused as `empty`, unless `{ allowNoCourses: true }` asks for its
   points alone, e.g. a file that only places start points.
+- **OCAD course-setting files** (.ocd, since v0.26.0): `readOcadCourses(bytes)` gives the
+  courses of a file made in OCAD's course setting mode (OCAD 10 to 2018), with
+  `backgroundMaps` (the background maps' file names, the course map first). Positions
+  are millimetres on the map, y downwards, as from Purple Pen, and `map` has the scale
+  and, when OCAD names a grid this package converts, the `georeference`, so the
+  controls can be placed on the earth without the background map. A course that ends
+  at a start gets a finish there (`finish:<start>`). The other course-setting objects
+  are `specials` (out-of-bounds and dangerous areas, boundaries, crossing points, first
+  aid, water, registration marks, white-out, the descriptions' corner and texts, the
+  course and event name as `field`), each on all courses or on `courses`; `printScale`,
+  `printArea` (the print window) and `descriptionCellMm` come from the file's print and
+  course-setting settings, and `courseSymbols` gives the control circle's and course
+  line's sizes in millimetres on the map. Forked and relay courses are not
+  read, nor OCAD's stored climb and length; lengths are along straight legs. An
+  ordinary map, or a course file from OCAD 8 or 9, is refused as `empty`;
+  `looksLikeOcad` recognises the file by its first bytes.
 - `isForkedCourse(set, course)` says whether a course is forked in any of these ways.
 - `joinCourseFamilies(set)` joins the courses of a 3.0 `family` into one forked course
   with `variations` (named after the family, id `family:<family>`, each variation coded
@@ -390,6 +406,9 @@ lists.
 import { decodeXmlBytes } from "orienteering-formats";
 import { looksLikeIofCourseData, readIofCourseData } from "orienteering-formats/iof";
 import { looksLikePurplePen, readPurplePen } from "orienteering-formats/purple-pen";
+import { readOcadCourses } from "orienteering-formats/ocad";
+
+const ocad = readOcadCourses(new Uint8Array(await ocdFile.arrayBuffer()));
 
 const text = decodeXmlBytes(new Uint8Array(await file.arrayBuffer()));
 const set = looksLikePurplePen(text) ? readPurplePen(text) : readIofCourseData(text);
@@ -417,6 +436,9 @@ try {
 }
 ```
 
+- **`readMapPlacement`** (since v0.26.0) gives the same `format`, `scale`,
+  `scaleFromFile`, `metersPerUnit` and `georef` without drawing the map; for an OCAD
+  file only the header and settings are read, so a large map takes no time.
 - **The SVG's units are the map file's own**, x to the right and y downwards: the same
   coordinates as the controls in the exchange section below. A course drawn in the same
   `viewBox` lands on the map without conversion.

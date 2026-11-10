@@ -111,8 +111,12 @@ export class OcdFileBuilder {
     constructor(version) {
         this.version = version;
     }
-    addString(recordType, text) {
-        this.strings.push({ recordType, text });
+    /**
+     * Adds a parameter string. `objectIndex` is the object it belongs to, numbered from 1
+     * in the order the objects are added (0 for none).
+     */
+    addString(recordType, text, objectIndex = 0) {
+        this.strings.push({ recordType, text, objectIndex });
         return this;
     }
     /** Convenience: a type-9 color record. Colors are listed front-most first. */
@@ -267,6 +271,9 @@ export class OcdFileBuilder {
         // nText counts 8-byte slots; leave room for the NUL terminator.
         const nText = text ? Math.ceil((text.length + 1) / 4) : 0;
         const nItem = o.nItemOverride ?? o.coords.length;
+        const objectString = this.version >= 12 ? (o.objectString ?? "") : "";
+        // Counted in 4-byte units, like OCAD's; room for the NUL terminator.
+        const nObjectString = objectString ? Math.ceil(((objectString.length + 1) * 2) / 4) : 0;
         w.integer(o.sym);
         w.byte(o.otp);
         w.byte(0); // unicode/customer
@@ -295,15 +302,17 @@ export class OcdFileBuilder {
             w.double(0); // modification date
             w.cardinal(nItem);
             w.word(nText);
-            w.word(0); // object string length
+            w.word(nObjectString); // object string length
             w.word(0); // database string length
-            w.byte(0); // object string type
+            w.byte(objectString ? 1 : 0); // object string type
             w.byte(0);
         }
         for (const c of o.coords)
             w.coord(c);
         if (nText > 0)
             w.utf16Fixed(text, nText * 4);
+        if (nObjectString > 0)
+            w.utf16Fixed(objectString, nObjectString * 2);
     }
     build() {
         const w = new ByteWriter();
@@ -340,6 +349,7 @@ export class OcdFileBuilder {
             w.patchCardinal(at, pos);
             w.patchCardinal(at + 4, bytes.length + 1);
             w.patchCardinal(at + 8, s.recordType);
+            w.patchCardinal(at + 12, s.objectIndex);
         });
         // --- symbols
         const symbolIndexPos = w.length;
