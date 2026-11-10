@@ -175,6 +175,8 @@ export function parseRunLiveBody(json) {
     }
     if (b.finishAt !== null && !isTime(b.finishAt))
         return null;
+    if (b.manualFinish !== undefined && typeof b.manualFinish !== "boolean")
+        return null;
     const club = typeof b.club === "string" ? b.club.trim() : "";
     const device = typeof b.device === "string" ? b.device.trim() : "";
     const courseLink = checkCourseLink(b.courseLink);
@@ -198,6 +200,8 @@ export function parseRunLiveBody(json) {
         body.startedAt = b.startedAt;
     if (device && device.length <= RUN_LIVE_DEVICE_MAX)
         body.device = device;
+    if (b.manualFinish === true && b.finishAt !== null)
+        body.manualFinish = true;
     return body;
 }
 /**
@@ -282,7 +286,8 @@ function rowFor(body) {
         points,
         pointsTaken,
         penalty,
-        complete: score ? true : takenInOrder === controls.length,
+        complete: !body.manualFinish && (score ? true : takenInOrder === controls.length),
+        ...(body.manualFinish === true ? { manualFinish: true } : {}),
         lastAt: Math.max(lastPunch, body.finishAt ?? 0),
     };
 }

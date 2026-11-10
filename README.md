@@ -176,6 +176,9 @@ any course, to the course's page on the site, without a competition.
   the start beep as `startedAt` (null until then; since v0.17.0). Rows say `started`;
   senders without the field count as started. `runLiveAbandoned` tells a site which runs
   never started `RUN_LIVE_START_GRACE_MS` (2 minutes) after their start time, to leave out.
+  A run the runner ended themselves sends `manualFinish: true` with `finishAt` as the moment
+  they ended it (since v0.27.0): its row keeps the `time` but is never `complete` or placed,
+  and says `manualFinish`. Senders without the field count as reaching the finish.
   On a score course the penalty is per started minute past the time limit, counted at the
   finish; rows give `points` after the penalty, `pointsTaken` and `penalty` (since v0.24.0).
   Points go below zero when the penalty is larger, as in Run's own result (before v0.24.0

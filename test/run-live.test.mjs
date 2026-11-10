@@ -151,6 +151,35 @@ test("a score course without a time limit gives no penalty, as in Run", () => {
   assert.deepEqual([c.rows[0].points, c.rows[0].pointsTaken, c.rows[0].penalty], [10, 10, 0]);
 });
 
+test("a run the runner ended themselves keeps its time but is never complete or placed", () => {
+  const [a] = runLiveStandings([
+    body("Gave up with all", [[0, 250], [1, 500], [2, 700]], 750, { manualFinish: true }),
+    body("Fast", [[0, 250], [1, 500], [2, 700]], 800),
+  ]);
+  assert.deepEqual(
+    a.rows.map((r) => [r.name, r.place, r.complete, r.manualFinish, r.time]),
+    [
+      ["Fast", 1, true, undefined, 800_000],
+      ["Gave up with all", null, false, true, 750_000],
+    ],
+  );
+  // Also on a score course, where every run is otherwise complete.
+  const score = { name: "Poäng", controls: [{ code: 31, points: 10 }], score: { timeLimitMinutes: 0, penaltyPerMinute: 0 } };
+  const [c] = runLiveStandings([body("Stopped", [[0, 60]], 120, { course: score, manualFinish: true })]);
+  assert.deepEqual([c.rows[0].complete, c.rows[0].place, c.rows[0].points], [false, null, 10]);
+});
+
+test("manualFinish is kept only on a finished run, and must be a boolean", () => {
+  const ended = parseRunLiveBody(body("A", [[0, 10]], 20, { manualFinish: true }));
+  assert.equal(ended.manualFinish, true);
+  // Without a finish there is nothing to have ended.
+  assert.equal(parseRunLiveBody(body("B", [[0, 10]], null, { manualFinish: true })).manualFinish, undefined);
+  assert.equal(parseRunLiveBody(body("C", [[0, 10]], 20, { manualFinish: false })).manualFinish, undefined);
+  assert.equal(parseRunLiveBody(body("D", [[0, 10]], 20, { manualFinish: "yes" })), null);
+  // Older senders: no field, the run counts as reaching the finish.
+  assert.equal(runLiveStandings([body("E", [[0, 1], [1, 2], [2, 3]], 4)])[0].rows[0].manualFinish, undefined);
+});
+
 test("a fixed-order course has no points, points taken or penalty", () => {
   const [c] = runLiveStandings([body("Anna", [[0, 100]], 400)]);
   assert.deepEqual([c.rows[0].points, c.rows[0].pointsTaken, c.rows[0].penalty], [null, null, null]);
