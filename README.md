@@ -375,6 +375,16 @@ lists.
   finish with a `<code>` gets it as its `label` ("S" or "M" without one). A file with
   no courses is refused as `empty`, unless `{ allowNoCourses: true }` asks for its
   points alone, e.g. a file that only places start points.
+- **Writing Purple Pen** (since v0.29.0): `writePurplePen(set, options)` writes a
+  `CourseSet` in millimetres (`options.scale`) as a .ppen that `readPurplePen` reads back
+  the same, in the form Purple Pen 3.5 writes: every finish gets its finish symbol (Purple
+  Pen crashes without one), a forked course becomes one course per variation, and
+  `options.layout` (an OCAD file's specials, print area and scale, description cell and
+  position, control descriptions and course symbol sizes, as `readOcadCourses` gives them)
+  is written as Purple Pen's own. Without a print scale it picks the largest common one at
+  which the courses fit on A4, and without placed descriptions it puts them right of the
+  courses. What did not fit, or was chosen, comes back as typed `notes` for the app to tell
+  the user. `title`, `mapFileName`, `creator` and `descriptionLang` are the other options.
 - **OCAD course-setting files** (.ocd, since v0.26.0): `readOcadCourses(bytes)` gives the
   courses of a file made in OCAD's course setting mode (OCAD 10 to 2018), with
   `backgroundMaps` (the background maps' file names, the course map first). Positions
